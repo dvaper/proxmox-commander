@@ -97,7 +97,7 @@
             </v-list>
             <v-alert type="info" variant="tonal" density="compact" class="mt-2">
               <div class="text-caption">
-                <strong>NetBox Login:</strong> admin / admin
+                <strong>NetBox Login:</strong> (wie im Setup konfiguriert)
               </div>
             </v-alert>
           </v-card-text>

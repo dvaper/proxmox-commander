@@ -22,6 +22,9 @@ class User(Base):
     is_super_admin = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
 
+    # NetBox Integration
+    netbox_user_id = Column(Integer, nullable=True)  # Referenz auf NetBox User ID
+
     # Zeitstempel
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_login = Column(DateTime(timezone=True), nullable=True)

@@ -55,6 +55,11 @@ class SetupConfig(BaseModel):
     proxmox_token_secret: str = Field(..., min_length=1)
     proxmox_verify_ssl: bool = False
 
+    # NetBox Admin Credentials (fuer integriertes NetBox)
+    netbox_admin_user: str = Field(default="admin", description="NetBox Admin-Benutzername")
+    netbox_admin_password: str = Field(default="admin", min_length=4, description="NetBox Admin-Passwort")
+    netbox_admin_email: str = Field(default="admin@example.com", description="NetBox Admin E-Mail")
+
     # Optionale Einstellungen
     secret_key: Optional[str] = None  # Wird generiert wenn nicht angegeben
     netbox_token: Optional[str] = None
@@ -330,6 +335,10 @@ def save_env_config(config: SetupConfig) -> SetupSaveResult:
         "SECRET_KEY": secret_key,
         "DEFAULT_SSH_USER": config.default_ssh_user,
         "ANSIBLE_REMOTE_USER": config.ansible_remote_user,
+        # NetBox Admin Credentials
+        "NETBOX_ADMIN_USER": config.netbox_admin_user,
+        "NETBOX_ADMIN_PASSWORD": config.netbox_admin_password,
+        "NETBOX_ADMIN_EMAIL": config.netbox_admin_email,
     }
 
     if config.netbox_token:

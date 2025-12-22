@@ -257,13 +257,54 @@
                         <div v-if="netboxMode === 'integrated'">
                           <v-alert type="info" variant="tonal" density="compact" class="mb-4">
                             Das integrierte NetBox wird automatisch mit der Applikation gestartet.
-                            Ein API-Token wird für die Kommunikation benötigt.
+                            Konfiguriere hier die Admin-Zugangsdaten.
                           </v-alert>
+
+                          <v-text-field
+                            v-model="config.netbox_admin_user"
+                            label="Admin-Benutzername"
+                            prepend-inner-icon="mdi-account"
+                            hint="Standard: admin"
+                            persistent-hint
+                            variant="outlined"
+                            density="compact"
+                            class="mb-4"
+                          ></v-text-field>
+
+                          <v-text-field
+                            v-model="config.netbox_admin_password"
+                            label="Admin-Passwort"
+                            prepend-inner-icon="mdi-lock"
+                            :type="showNetboxPassword ? 'text' : 'password'"
+                            :append-inner-icon="showNetboxPassword ? 'mdi-eye' : 'mdi-eye-off'"
+                            @click:append-inner="showNetboxPassword = !showNetboxPassword"
+                            hint="Mindestens 4 Zeichen"
+                            persistent-hint
+                            variant="outlined"
+                            density="compact"
+                            class="mb-4"
+                            :rules="[v => !!v || 'Passwort erforderlich', v => (v && v.length >= 4) || 'Min. 4 Zeichen']"
+                          ></v-text-field>
+
+                          <v-text-field
+                            v-model="config.netbox_admin_email"
+                            label="Admin E-Mail"
+                            prepend-inner-icon="mdi-email"
+                            hint="Optional, aber empfohlen"
+                            persistent-hint
+                            variant="outlined"
+                            density="compact"
+                            class="mb-4"
+                          ></v-text-field>
+
+                          <v-divider class="my-4"></v-divider>
 
                           <v-text-field
                             v-model="config.netbox_token"
                             label="NetBox API Token"
                             prepend-inner-icon="mdi-key-variant"
+                            hint="Für interne Kommunikation zwischen Commander und NetBox"
+                            persistent-hint
                             variant="outlined"
                             density="compact"
                             readonly
@@ -376,6 +417,10 @@
                           </span>
                           <span v-else>Deaktiviert</span>
                         </td>
+                      </tr>
+                      <tr v-if="netboxMode === 'integrated'">
+                        <td class="font-weight-bold">NetBox Admin</td>
+                        <td>{{ config.netbox_admin_user }} / {{ config.netbox_admin_password ? '******' : '(kein Passwort)' }}</td>
                       </tr>
                     </tbody>
                   </v-table>
@@ -508,6 +553,10 @@ const config = ref({
   default_ssh_user: 'ansible',
   netbox_token: '',
   netbox_url: '',
+  // NetBox Admin Credentials
+  netbox_admin_user: 'admin',
+  netbox_admin_password: '',
+  netbox_admin_email: 'admin@example.com',
 })
 
 // NetBox Mode: 'integrated', 'external', 'none'
@@ -515,6 +564,7 @@ const netboxMode = ref('integrated')
 
 // UI State
 const showSecret = ref(false)
+const showNetboxPassword = ref(false)
 const testing = ref(false)
 const saving = ref(false)
 const testResult = ref(null)
@@ -624,10 +674,16 @@ async function saveConfig() {
   // NetBox-Konfiguration basierend auf Modus
   let netboxToken = null
   let netboxUrl = null
+  let netboxAdminUser = 'admin'
+  let netboxAdminPassword = 'admin'
+  let netboxAdminEmail = 'admin@example.com'
 
   if (netboxMode.value === 'integrated') {
     netboxToken = config.value.netbox_token || null
     netboxUrl = null  // Verwendet Standard: http://netbox:8080
+    netboxAdminUser = config.value.netbox_admin_user || 'admin'
+    netboxAdminPassword = config.value.netbox_admin_password || 'admin'
+    netboxAdminEmail = config.value.netbox_admin_email || 'admin@example.com'
   } else if (netboxMode.value === 'external') {
     netboxToken = config.value.netbox_token || null
     netboxUrl = config.value.netbox_url || null
@@ -644,6 +700,9 @@ async function saveConfig() {
       default_ssh_user: config.value.default_ssh_user,
       netbox_token: netboxToken,
       netbox_url: netboxUrl,
+      netbox_admin_user: netboxAdminUser,
+      netbox_admin_password: netboxAdminPassword,
+      netbox_admin_email: netboxAdminEmail,
     })
 
     // Prüfen ob Konfiguration direkt geladen wurde (kein Restart nötig)

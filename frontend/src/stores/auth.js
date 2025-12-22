@@ -65,11 +65,12 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function changePassword(currentPassword, newPassword, confirmPassword) {
+  async function changePassword(currentPassword, newPassword, confirmPassword, syncToNetbox = true) {
     const response = await api.post('/api/auth/change-password', {
       current_password: currentPassword,
       new_password: newPassword,
       confirm_password: confirmPassword,
+      sync_to_netbox: syncToNetbox,
     })
     return response.data
   }
