@@ -61,8 +61,14 @@ class InventorySyncService:
             if not proxmox_vms:
                 return True, "Keine VMs in Proxmox gefunden", details
 
-            # Inventory laden
-            editor = InventoryEditor(Path(settings.ansible_inventory_path))
+            # Inventory laden (erstellen falls nicht vorhanden)
+            inventory_path = Path(settings.ansible_inventory_path)
+            if not inventory_path.exists():
+                logger.info(f"Erstelle initiales Inventory: {inventory_path}")
+                inventory_path.parent.mkdir(parents=True, exist_ok=True)
+                inventory_path.write_text("---\nall:\n  children:\n    proxmox_discovered:\n      hosts: {}\n")
+
+            editor = InventoryEditor(inventory_path)
             editor.load()
 
             parser = InventoryParser(settings.ansible_inventory_path)

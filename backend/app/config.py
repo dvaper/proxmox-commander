@@ -115,6 +115,8 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
         # Case-insensitive environment variables
         case_sensitive = False
+        # Extra Variablen ignorieren (z.B. fuer andere Container)
+        extra = "ignore"
 
 
 # Globale Settings-Instanz

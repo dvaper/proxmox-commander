@@ -1,0 +1,41 @@
+[
+  {
+    "version": "v0.1.0",
+    "date": "2025-12-22",
+    "changes": {
+      "Infrastruktur": [
+        "Standalone Docker Compose Setup",
+        "Integrierter NetBox Container (IPAM/DCIM)",
+        "PostgreSQL und Redis fuer NetBox",
+        "Konfiguration via .env Datei",
+        "Persistente Volumes fuer alle Daten"
+      ],
+      "VM-Management": [
+        "VM-Deployment via Proxmox und Terraform",
+        "NetBox IPAM Integration (automatische IP-Verwaltung)",
+        "VM Power Control: Start, Stop, Shutdown, Reboot",
+        "Snapshot Management: Erstellen, Loeschen, Rollback",
+        "VM Cloning: Full Clone und Linked Clone",
+        "VM Migration zwischen Proxmox-Nodes",
+        "VM-Vorlagen/Presets fuer wiederkehrende Konfigurationen",
+        "Multi-VLAN Support",
+        "Frontend-URL pro VM fuer direkten Zugriff"
+      ],
+      "Ansible Integration": [
+        "Playbook Execution mit Live-Output via WebSocket",
+        "Inventory Browser und Editor",
+        "Playbook Editor mit YAML-Syntax-Highlighting",
+        "Playbook-Vorlagen fuer schnellen Start"
+      ],
+      "Cloud-Init": [
+        "13 spezialisierte Profile (Docker, K8s, Web, DB, etc.)",
+        "Phone-Home Callback nach VM-Boot",
+        "SSH-Hardening und Security Best Practices"
+      ],
+      "Benutzer-Verwaltung": [
+        "Rollen-basierte Zugriffskontrolle",
+        "JWT-Authentifizierung"
+      ]
+    }
+  }
+]
