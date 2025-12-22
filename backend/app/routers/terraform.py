@@ -41,6 +41,31 @@ router = APIRouter(prefix="/api/terraform", tags=["terraform"])
 # NetBox IPAM Endpoints
 # =============================================================================
 
+class IPAMStatus(BaseModel):
+    """Status der NetBox IPAM-Konfiguration"""
+    configured: bool
+    prefixes_count: int = 0
+    vlans_count: int = 0
+    netbox_url: Optional[str] = None
+    error: Optional[str] = None
+
+
+@router.get("/ipam/status", response_model=IPAMStatus)
+async def get_ipam_status(
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Prüft ob NetBox IPAM konfiguriert ist.
+
+    Gibt zurück ob Prefixes in NetBox vorhanden sind.
+    Ohne Prefixes können keine freien IPs abgefragt werden.
+
+    Die Konfiguration erfolgt direkt in der NetBox-Oberfläche.
+    """
+    result = await netbox_service.check_ipam_status()
+    return IPAMStatus(**result)
+
+
 @router.get("/vlans", response_model=list[VLANInfo])
 async def get_vlans(
     current_user: User = Depends(get_current_active_user),

@@ -27,7 +27,6 @@ from app.services.ansible_inventory_service import ansible_inventory_service
 from app.services.proxmox_service import proxmox_service
 from app.services.vm_history_service import vm_history_service
 from app.services.cloud_init_service import cloud_init_service
-from app.services.vlan_config import get_bridge, get_gateway
 from app.schemas.cloud_init import CloudInitProfile
 
 
@@ -39,12 +38,20 @@ class VMDeploymentService:
         self.terraform_service = TerraformService()
 
     def get_bridge_for_vlan(self, vlan: int) -> str:
-        """Gibt die Bridge für ein VLAN zurück"""
-        return get_bridge(vlan)
+        """
+        Gibt die Bridge für ein VLAN zurück.
+
+        Konvention: vmbr{vlan_id}
+        """
+        return f"vmbr{vlan}"
 
     def get_gateway_for_vlan(self, vlan: int) -> str:
-        """Gibt das Gateway für ein VLAN zurück"""
-        return get_gateway(vlan)
+        """
+        Gibt das Gateway für ein VLAN zurück.
+
+        Konvention: 192.168.{vlan_id}.1
+        """
+        return f"192.168.{vlan}.1"
 
     @property
     def vms_dir(self) -> Path:
