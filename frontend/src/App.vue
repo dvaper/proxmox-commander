@@ -1,7 +1,7 @@
 <template>
   <v-app>
-    <!-- Navigation (nur wenn eingeloggt) -->
-    <v-navigation-drawer v-if="authStore.isAuthenticated" v-model="drawer" app>
+    <!-- Navigation (nur wenn eingeloggt und nicht im Setup) -->
+    <v-navigation-drawer v-if="authStore.isAuthenticated && !isSetupRoute" v-model="drawer" app>
       <v-list-item prepend-icon="mdi-server-network">
         <v-list-item-title>Proxmox Commander</v-list-item-title>
         <v-list-item-subtitle>
@@ -73,8 +73,8 @@
 
     </v-navigation-drawer>
 
-    <!-- App Bar (nur wenn eingeloggt) -->
-    <v-app-bar v-if="authStore.isAuthenticated" app elevation="1">
+    <!-- App Bar (nur wenn eingeloggt und nicht im Setup) -->
+    <v-app-bar v-if="authStore.isAuthenticated && !isSetupRoute" app elevation="1">
       <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
       <v-toolbar-title>{{ currentPageTitle }}</v-toolbar-title>
       <v-spacer></v-spacer>
@@ -225,6 +225,9 @@ const pageTitles = {
   '/executions': 'Ausführungen',
   '/users': 'Benutzer',
 }
+
+// Setup-Route erkennen (keine Navigation anzeigen)
+const isSetupRoute = computed(() => route.path === '/setup')
 
 const currentPageTitle = computed(() => {
   // Prüfe auf exakte Übereinstimmung
