@@ -462,10 +462,18 @@ async def save_setup(config: SetupConfig):
     if not result.success:
         raise HTTPException(status_code=500, detail=result.error)
 
-    # Container-Restart ist erforderlich, damit die neuen Environment-Variablen
-    # von docker-compose geladen werden. Ein Hot-Reload innerhalb des laufenden
-    # Containers reicht nicht aus, da andere Module bereits Settings importiert haben.
-    # restart_required bleibt True (default)
+    # Settings neu laden (Hot-Reload via SettingsProxy)
+    # Da PROXMOX_* nicht mehr in docker-compose.yml stehen, werden sie
+    # direkt aus der .env Datei gelesen und koennen hot-reloaded werden.
+    from app.config import reload_settings
+    try:
+        reload_settings(str(get_env_file_path()))
+        result.restart_required = False
+        result.message = "Konfiguration erfolgreich gespeichert und aktiviert."
+        logger.info("Settings wurden nach Setup neu geladen (Hot-Reload)")
+    except Exception as e:
+        logger.warning(f"Hot-Reload fehlgeschlagen: {e} - Container-Restart erforderlich")
+        # Fallback: restart_required bleibt True
 
     return result
 

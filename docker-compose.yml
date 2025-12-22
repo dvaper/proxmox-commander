@@ -43,13 +43,8 @@ services:
       - TERRAFORM_DIR=/data/terraform
       - SSH_KEY_PATH=/data/ssh/id_ed25519
       - ENV_FILE=/app/.env
-      # Proxmox API (vom Setup-Wizard konfiguriert)
-      - PROXMOX_HOST=${PROXMOX_HOST:-}
-      - PROXMOX_TOKEN_ID=${PROXMOX_TOKEN_ID:-}
-      - PROXMOX_TOKEN_SECRET=${PROXMOX_TOKEN_SECRET:-}
-      - PROXMOX_VERIFY_SSL=${PROXMOX_VERIFY_SSL:-false}
-      - ANSIBLE_REMOTE_USER=${ANSIBLE_REMOTE_USER:-ansible}
-      - DEFAULT_SSH_USER=${DEFAULT_SSH_USER:-ansible}
+      # Proxmox API, Ansible, SSH werden direkt aus .env gelesen
+      # (nicht hier setzen - sonst funktioniert Hot-Reload nicht)
     volumes:
       - ./data/db:/data/db
       - ./data/inventory:/data/inventory

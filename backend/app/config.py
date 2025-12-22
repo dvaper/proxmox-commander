@@ -1,12 +1,16 @@
 """
 Konfiguration fuer Proxmox Commander
 
-Alle Einstellungen werden aus Umgebungsvariablen geladen.
+Alle Einstellungen werden aus Umgebungsvariablen und .env Datei geladen.
 Siehe .env.example fuer verfuegbare Optionen.
+
+Hot-Reload: Nach Aenderungen an der .env Datei kann reload_settings()
+aufgerufen werden. Alle Module die 'settings' importiert haben sehen
+automatisch die neuen Werte (via SettingsProxy).
 """
 from pydantic_settings import BaseSettings
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 from dotenv import load_dotenv
 import os
 
@@ -119,8 +123,41 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 
-# Globale Settings-Instanz
-settings = Settings()
+# =============================================================================
+# Settings Proxy fuer Hot-Reload Support
+# =============================================================================
+
+class SettingsProxy:
+    """
+    Proxy-Klasse die alle Attributzugriffe an die aktuelle Settings-Instanz weiterleitet.
+
+    Ermoeglicht Hot-Reload: Nach reload_settings() sehen alle Module die bereits
+    'settings' importiert haben automatisch die neuen Werte.
+    """
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(_current_settings, name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        setattr(_current_settings, name, value)
+
+    def __repr__(self) -> str:
+        return f"SettingsProxy({_current_settings!r})"
+
+
+def _load_initial_settings() -> Settings:
+    """Laedt die initialen Settings aus der .env Datei."""
+    env_file = os.getenv("ENV_FILE", "/app/.env")
+    if os.path.exists(env_file):
+        load_dotenv(env_file, override=True)
+    return Settings()
+
+
+# Interne Settings-Instanz (wird bei reload ersetzt)
+_current_settings: Settings = _load_initial_settings()
+
+# Oeffentlicher Proxy (bleibt immer das gleiche Objekt)
+settings: SettingsProxy = SettingsProxy()
 
 
 def reload_settings(env_file: str = None) -> Settings:
@@ -128,8 +165,9 @@ def reload_settings(env_file: str = None) -> Settings:
     Laedt die Settings neu aus der .env Datei.
 
     Wird vom Setup-Wizard aufgerufen nachdem die Konfiguration gespeichert wurde.
+    Alle Module die 'settings' importiert haben sehen automatisch die neuen Werte.
     """
-    global settings
+    global _current_settings
 
     # Bestimme den Pfad zur .env Datei
     if env_file is None:
@@ -140,6 +178,11 @@ def reload_settings(env_file: str = None) -> Settings:
         load_dotenv(env_file, override=True)
 
     # Erstelle neue Settings-Instanz mit den aktualisierten Umgebungsvariablen
-    settings = Settings()
+    _current_settings = Settings()
 
-    return settings
+    return _current_settings
+
+
+def get_settings() -> Settings:
+    """Gibt die aktuelle Settings-Instanz zurueck."""
+    return _current_settings
