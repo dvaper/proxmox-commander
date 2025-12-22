@@ -2,14 +2,15 @@ stages:
   - build
 
 variables:
-  REGISTRY: registry.gitlab.newsxc.net
+  # Interne Registry-IP (Port 5050 auf GitLab VM)
+  REGISTRY: 192.168.60.170:5050
   IMAGE_PATH: ${REGISTRY}/darthvaper/docker-proxmox-commander
 
 .docker-build:
   image: docker:24
   services:
     - name: docker:24-dind
-      command: ["--insecure-registry=registry.gitlab.newsxc.net"]
+      command: ["--insecure-registry=192.168.60.170:5050"]
   variables:
     DOCKER_TLS_CERTDIR: ""
     DOCKER_HOST: tcp://docker:2375
