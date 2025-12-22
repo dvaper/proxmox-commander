@@ -65,6 +65,8 @@ services:
     image: netboxcommunity/netbox:v4.0
     container_name: proxmox-commander-netbox
     restart: unless-stopped
+    ports:
+      - "${NETBOX_PORT:-8081}:8080"
     depends_on:
       postgres:
         condition: service_healthy

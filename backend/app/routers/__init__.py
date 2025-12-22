@@ -10,7 +10,6 @@ from app.routers.settings import router as settings_router
 from app.routers.terraform import router as terraform_router
 from app.routers.vm_templates import router as vm_templates_router
 from app.routers.cloud_init import router as cloud_init_router
-from app.routers.git_sync import router as git_sync_router
 from app.routers.setup import router as setup_router
 
 __all__ = [
@@ -23,6 +22,5 @@ __all__ = [
     "terraform_router",
     "vm_templates_router",
     "cloud_init_router",
-    "git_sync_router",
     "setup_router",
 ]

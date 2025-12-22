@@ -79,38 +79,7 @@
       <v-toolbar-title>{{ currentPageTitle }}</v-toolbar-title>
       <v-spacer></v-spacer>
 
-      <!-- Git Sync Button -->
-      <v-tooltip location="bottom">
-        <template v-slot:activator="{ props }">
-          <v-btn
-            icon
-            v-bind="props"
-            @click="syncGit"
-            :loading="gitSyncing"
-            :disabled="gitSyncing"
-          >
-            <v-badge
-              v-if="gitStatus.commits_behind > 0"
-              :content="gitStatus.commits_behind"
-              color="warning"
-              offset-x="-2"
-              offset-y="-2"
-            >
-              <v-icon>mdi-source-branch-sync</v-icon>
-            </v-badge>
-            <v-icon v-else>mdi-source-branch-sync</v-icon>
-          </v-btn>
-        </template>
-        <span v-if="gitStatus.commits_behind > 0">
-          {{ gitStatus.commits_behind }} Update(s) verfügbar - Klicken zum Sync
-        </span>
-        <span v-else-if="gitStatus.branch">
-          Git: {{ gitStatus.branch }} (aktuell)
-        </span>
-        <span v-else>Git synchronisieren</span>
-      </v-tooltip>
-
-      <!-- User Menu (wie in Responsibilities) -->
+      <!-- User Menu -->
       <v-menu>
         <template v-slot:activator="{ props }">
           <v-btn icon v-bind="props">
@@ -191,12 +160,11 @@
 </template>
 
 <script setup>
-import { ref, computed, provide, onMounted, watch } from 'vue'
+import { ref, computed, provide } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ProfileDialog from '@/components/ProfileDialog.vue'
 import changelog from '@/data/changelog.json'
-import api from '@/api/client'
 
 const appVersion = __APP_VERSION__
 
@@ -207,14 +175,6 @@ const authStore = useAuthStore()
 const drawer = ref(true)
 const profileDialog = ref(null)
 const showChangelog = ref(false)
-
-// Git Sync State
-const gitSyncing = ref(false)
-const gitStatus = ref({
-  branch: null,
-  commits_behind: 0,
-  commits_ahead: 0,
-})
 
 // Mapping für Seitentitel
 const pageTitles = {
@@ -266,63 +226,6 @@ const logout = () => {
   authStore.logout()
   router.push('/login')
 }
-
-// Git Sync Functions
-const fetchGitStatus = async () => {
-  if (!authStore.isAuthenticated) return
-  try {
-    const response = await api.get('/api/git/status')
-    gitStatus.value = {
-      branch: response.data.branch,
-      commits_behind: response.data.commits_behind || 0,
-      commits_ahead: response.data.commits_ahead || 0,
-    }
-  } catch (error) {
-    console.warn('Git status fetch failed:', error)
-  }
-}
-
-const syncGit = async () => {
-  if (!authStore.isSuperAdmin) {
-    showSnackbar('Nur Admins können synchronisieren', 'warning')
-    return
-  }
-
-  gitSyncing.value = true
-  try {
-    const response = await api.post('/api/git/sync')
-    if (response.data.success) {
-      showSnackbar(response.data.message || 'Git synchronisiert', 'success')
-      // Status aktualisieren
-      await fetchGitStatus()
-    } else {
-      showSnackbar(response.data.error || 'Sync fehlgeschlagen', 'error')
-    }
-  } catch (error) {
-    showSnackbar(error.response?.data?.detail || 'Sync fehlgeschlagen', 'error')
-  } finally {
-    gitSyncing.value = false
-  }
-}
-
-// Git Status beim Login und periodisch aktualisieren
-watch(() => authStore.isAuthenticated, (isAuth) => {
-  if (isAuth) {
-    fetchGitStatus()
-  }
-}, { immediate: true })
-
-// Periodisch Git Status prüfen (alle 5 Minuten)
-onMounted(() => {
-  if (authStore.isAuthenticated) {
-    fetchGitStatus()
-  }
-  setInterval(() => {
-    if (authStore.isAuthenticated) {
-      fetchGitStatus()
-    }
-  }, 5 * 60 * 1000)
-})
 </script>
 
 <style>
