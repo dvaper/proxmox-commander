@@ -382,8 +382,9 @@
 
                   <v-alert type="warning" variant="tonal" class="mt-4">
                     <v-icon>mdi-restart</v-icon>
-                    Nach dem Speichern muss der Container neu gestartet werden,
-                    damit die Einstellungen wirksam werden.
+                    Nach dem Speichern müssen die Container mit
+                    <code>docker compose down && docker compose up -d</code>
+                    neu gestartet werden (restart reicht nicht!).
                   </v-alert>
                 </v-card-text>
               </v-card>
@@ -463,7 +464,7 @@
                 Bitte starte die Container neu, damit die Einstellungen wirksam werden:
               </p>
               <v-code class="d-block pa-3 bg-grey-lighten-4">
-                docker compose restart
+                docker compose down && docker compose up -d
               </v-code>
               <p class="mt-4 text-grey-darken-1">
                 Nach dem Neustart kannst du dich mit dem Standard-Login anmelden:<br>
