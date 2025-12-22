@@ -1,6 +1,7 @@
 """
 Auth Router - Login, Profil, Passwort-Änderung
 """
+import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -19,6 +20,9 @@ from app.schemas.user import (
 from app.auth.security import verify_password, get_password_hash, create_access_token
 from app.auth.dependencies import get_current_user, get_current_active_user
 from app.services.permission_service import get_permission_service
+from app.services.netbox_user_service import netbox_user_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -112,6 +116,7 @@ async def change_password(
     Eigenes Passwort ändern.
 
     Erfordert das aktuelle Passwort zur Bestätigung.
+    Optional: Synchronisiert das Passwort auch nach NetBox.
     """
     # Aktuelles Passwort verifizieren
     if not verify_password(password_data.current_password, current_user.password_hash):
@@ -122,9 +127,33 @@ async def change_password(
 
     # Neues Passwort setzen
     current_user.password_hash = get_password_hash(password_data.new_password)
+
+    # NetBox-Passwort synchronisieren (wenn aktiviert und verknüpft)
+    netbox_synced = False
+    if password_data.sync_to_netbox and current_user.netbox_user_id:
+        try:
+            success = await netbox_user_service.change_password(
+                current_user.netbox_user_id,
+                password_data.new_password,
+            )
+            if success:
+                netbox_synced = True
+                logger.info(f"NetBox-Passwort für User '{current_user.username}' synchronisiert")
+        except Exception as e:
+            logger.warning(f"NetBox-Passwort-Sync fehlgeschlagen: {e}")
+
     await db.commit()
 
-    return {"message": "Passwort erfolgreich geändert"}
+    message = "Passwort erfolgreich geändert"
+    if password_data.sync_to_netbox:
+        if netbox_synced:
+            message += " (auch in NetBox)"
+        elif current_user.netbox_user_id:
+            message += " (NetBox-Sync fehlgeschlagen)"
+        else:
+            message += " (kein NetBox-User verknüpft)"
+
+    return {"message": message, "netbox_synced": netbox_synced}
 
 
 @router.post("/init", response_model=UserResponse)

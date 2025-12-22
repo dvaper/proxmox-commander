@@ -49,8 +49,29 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    # Migrationen für existierende Datenbanken
+    await run_migrations()
+
     # Default-Admin erstellen falls keine User existieren
     await create_default_admin()
+
+
+async def run_migrations():
+    """Führt manuelle Schema-Migrationen für SQLite durch"""
+    from sqlalchemy import text
+
+    async with engine.begin() as conn:
+        # Migration: netbox_user_id Spalte zu users hinzufügen
+        try:
+            result = await conn.execute(text("PRAGMA table_info(users)"))
+            columns = [row[1] for row in result.fetchall()]
+
+            if "netbox_user_id" not in columns:
+                logger.info("Migration: Füge netbox_user_id Spalte zu users hinzu...")
+                await conn.execute(text("ALTER TABLE users ADD COLUMN netbox_user_id INTEGER"))
+                logger.info("Migration erfolgreich: netbox_user_id hinzugefügt")
+        except Exception as e:
+            logger.debug(f"Migration übersprungen oder fehlgeschlagen: {e}")
 
 
 async def create_default_admin():

@@ -162,6 +162,15 @@
                 prepend-icon="mdi-lock-check"
               ></v-text-field>
 
+              <v-checkbox
+                v-model="passwordData.syncToNetbox"
+                label="Passwort auch in NetBox ändern"
+                hint="Synchronisiert das Passwort mit Ihrem NetBox-Konto"
+                persistent-hint
+                density="compact"
+                class="mt-2"
+              ></v-checkbox>
+
               <v-btn
                 color="primary"
                 type="submit"
@@ -207,6 +216,7 @@ const passwordData = ref({
   currentPassword: '',
   newPassword: '',
   confirmPassword: '',
+  syncToNetbox: true,  // Standardmäßig aktiviert
 })
 
 async function changePassword() {
@@ -215,16 +225,23 @@ async function changePassword() {
 
   saving.value = true
   try {
-    await authStore.changePassword(
+    const result = await authStore.changePassword(
       passwordData.value.currentPassword,
       passwordData.value.newPassword,
-      passwordData.value.confirmPassword
+      passwordData.value.confirmPassword,
+      passwordData.value.syncToNetbox
     )
-    showSnackbar('Passwort erfolgreich geändert')
+    // Feedback basierend auf NetBox-Sync
+    let message = 'Passwort erfolgreich geändert'
+    if (result?.netbox_synced) {
+      message += ' (auch in NetBox)'
+    }
+    showSnackbar(message)
     passwordData.value = {
       currentPassword: '',
       newPassword: '',
       confirmPassword: '',
+      syncToNetbox: true,
     }
     tab.value = 'profile'
   } catch (e) {
@@ -247,6 +264,7 @@ function open() {
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
+    syncToNetbox: true,
   }
   dialog.value = true
 }

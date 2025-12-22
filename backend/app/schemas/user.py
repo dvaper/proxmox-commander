@@ -87,6 +87,7 @@ class UserResponse(BaseModel):
     is_admin: bool  # Legacy
     is_super_admin: bool
     is_active: bool
+    netbox_user_id: Optional[int] = None  # NetBox User ID für Synchronisation
     created_at: datetime
     last_login: Optional[datetime] = None
 
@@ -136,6 +137,7 @@ class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str
     confirm_password: str
+    sync_to_netbox: bool = True  # Standardmäßig aktiviert
 
     @field_validator('new_password')
     @classmethod

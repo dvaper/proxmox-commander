@@ -1,8 +1,10 @@
 """
 Users Router - Benutzerverwaltung (nur Super-Admin)
 """
+import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
@@ -26,8 +28,21 @@ from app.schemas.user import (
 from app.auth.security import get_password_hash
 from app.auth.dependencies import get_current_super_admin_user
 from app.services.settings_service import get_settings_service
+from app.services.netbox_user_service import netbox_user_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/users", tags=["users"])
+
+
+# ==================== NetBox Sync Schemas ====================
+
+class NetBoxSyncResult(BaseModel):
+    """Ergebnis einer NetBox-Sync-Operation"""
+    success: bool
+    synced_count: int = 0
+    failed_count: int = 0
+    details: List[dict] = []
 
 
 # ==================== User CRUD ====================
@@ -122,6 +137,7 @@ async def create_user(
     Neuen Benutzer erstellen (nur Super-Admin).
 
     Wendet automatisch Default-Gruppen und -Playbooks an.
+    Synchronisiert den User automatisch nach NetBox.
     """
     # Prüfen ob Username existiert
     result = await db.execute(
@@ -145,6 +161,20 @@ async def create_user(
 
     db.add(user)
     await db.flush()  # ID generieren
+
+    # NetBox-User erstellen (graceful degradation)
+    try:
+        netbox_user = await netbox_user_service.create_user(
+            username=user_data.username,
+            email=user_data.email or f"{user_data.username}@local",
+            password=user_data.password,
+            is_staff=user_data.is_super_admin,  # Super-Admin = NetBox Staff
+        )
+        if netbox_user:
+            user.netbox_user_id = netbox_user["id"]
+            logger.info(f"NetBox User '{user_data.username}' erstellt (ID: {netbox_user['id']})")
+    except Exception as e:
+        logger.warning(f"NetBox User-Erstellung fehlgeschlagen (Commander-User wird trotzdem erstellt): {e}")
 
     # Default-Zugriffe anwenden (nur für Nicht-Super-Admins)
     if not user_data.is_super_admin:
@@ -262,7 +292,11 @@ async def delete_user(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_super_admin_user),
 ):
-    """Benutzer löschen (nur Super-Admin)"""
+    """
+    Benutzer löschen (nur Super-Admin).
+
+    Deaktiviert auch den verknüpften NetBox-User (anstatt zu löschen).
+    """
     result = await db.execute(
         select(User).where(User.id == user_id)
     )
@@ -294,6 +328,14 @@ async def delete_user(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Kann den letzten Super-Admin nicht löschen",
             )
+
+    # NetBox-User deaktivieren (nicht löschen, um Audit-Trail zu erhalten)
+    if user.netbox_user_id:
+        try:
+            await netbox_user_service.deactivate_user(user.netbox_user_id)
+            logger.info(f"NetBox User ID {user.netbox_user_id} deaktiviert")
+        except Exception as e:
+            logger.warning(f"NetBox User-Deaktivierung fehlgeschlagen: {e}")
 
     await db.delete(user)
     await db.commit()
@@ -562,3 +604,137 @@ async def set_user_playbooks(
         await db.refresh(access)
 
     return new_accesses
+
+
+# ==================== NetBox Sync ====================
+
+@router.post("/sync/netbox", response_model=NetBoxSyncResult)
+async def sync_all_users_to_netbox(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_super_admin_user),
+):
+    """
+    Synchronisiert alle Commander-User nach NetBox (Batch-Sync).
+
+    - Erstellt fehlende NetBox-User
+    - Aktualisiert netbox_user_id in der Datenbank
+    - Super-Admin werden als NetBox Staff erstellt
+
+    Nur für Super-Admins.
+    """
+    result = await db.execute(select(User))
+    users = list(result.scalars().all())
+
+    synced_count = 0
+    failed_count = 0
+    details = []
+
+    for user in users:
+        try:
+            # Prüfen ob User bereits verknüpft ist
+            if user.netbox_user_id:
+                # Prüfen ob NetBox-User noch existiert
+                netbox_user = await netbox_user_service.get_user_by_id(user.netbox_user_id)
+                if netbox_user:
+                    details.append({
+                        "username": user.username,
+                        "status": "skipped",
+                        "message": f"Bereits verknüpft (NetBox ID: {user.netbox_user_id})",
+                    })
+                    continue
+
+            # NetBox-User erstellen oder finden
+            netbox_user = await netbox_user_service.create_user(
+                username=user.username,
+                email=user.email or f"{user.username}@local",
+                password="ChangeMe123!",  # Temporäres Passwort
+                is_staff=user.is_super_admin,
+            )
+
+            if netbox_user:
+                user.netbox_user_id = netbox_user["id"]
+                synced_count += 1
+                details.append({
+                    "username": user.username,
+                    "status": "synced",
+                    "message": f"NetBox User erstellt (ID: {netbox_user['id']})",
+                    "netbox_user_id": netbox_user["id"],
+                })
+            else:
+                failed_count += 1
+                details.append({
+                    "username": user.username,
+                    "status": "failed",
+                    "message": "NetBox-User konnte nicht erstellt werden",
+                })
+
+        except Exception as e:
+            failed_count += 1
+            details.append({
+                "username": user.username,
+                "status": "error",
+                "message": str(e),
+            })
+            logger.error(f"Sync für User '{user.username}' fehlgeschlagen: {e}")
+
+    await db.commit()
+
+    return NetBoxSyncResult(
+        success=failed_count == 0,
+        synced_count=synced_count,
+        failed_count=failed_count,
+        details=details,
+    )
+
+
+@router.post("/{user_id}/sync/netbox")
+async def sync_single_user_to_netbox(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_super_admin_user),
+):
+    """
+    Synchronisiert einen einzelnen User nach NetBox.
+
+    Nur für Super-Admins.
+    """
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Benutzer nicht gefunden",
+        )
+
+    # NetBox-User erstellen oder finden
+    try:
+        netbox_user = await netbox_user_service.create_user(
+            username=user.username,
+            email=user.email or f"{user.username}@local",
+            password="ChangeMe123!",  # Temporäres Passwort
+            is_staff=user.is_super_admin,
+        )
+
+        if netbox_user:
+            user.netbox_user_id = netbox_user["id"]
+            await db.commit()
+            return {
+                "success": True,
+                "message": f"NetBox User erstellt/aktualisiert (ID: {netbox_user['id']})",
+                "netbox_user_id": netbox_user["id"],
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="NetBox-User konnte nicht erstellt werden",
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Sync für User '{user.username}' fehlgeschlagen: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Sync fehlgeschlagen: {str(e)}",
+        )
