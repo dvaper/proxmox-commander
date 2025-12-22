@@ -1,0 +1,633 @@
+"""
+Cloud-Init Service - Generiert Cloud-Init User-Data fuer VMs
+"""
+import yaml
+import subprocess
+import tempfile
+import os
+from typing import Optional, List, Dict, Any
+from datetime import datetime
+from pathlib import Path
+
+from app.schemas.cloud_init import CloudInitProfile, CLOUD_INIT_PROFILES
+
+
+class CloudInitService:
+    """Service fuer Cloud-Init Konfiguration"""
+
+    # Standard SSH-Key fuer Ansible-Zugang
+    DEFAULT_SSH_KEYS = [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGeyOtZW2jHFE0BqiCB0XKAjeWxhXK85M1rsXGGnjua3 darthvaper@newsxc.net",
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDDy9NmiGWdAN6nY2qpx9bS0KJ7GszxSjcCp1ilf4nK/ ansible-control@homelab",
+    ]
+
+    # Ansible Commander URL fuer Phone-Home
+    PHONE_HOME_URL = "http://192.168.60.133:8000/api/cloud-init/callback"
+
+    # NAS Snippets Pfad (via Proxmox gemounted)
+    NAS_SNIPPETS_PATH = "/mnt/pve/nas/snippets"
+    # Proxmox-Referenz fuer cicustom
+    NAS_SNIPPETS_REF = "nas:snippets"
+
+    def get_profiles(self) -> List[Dict[str, Any]]:
+        """Gibt alle verfuegbaren Profile zurueck"""
+        return [
+            {
+                "id": profile_id,
+                "name": info["name"],
+                "description": info["description"],
+                "packages": info.get("packages", []),
+                "groups": info.get("groups", []),
+                "services": info.get("services", []),
+            }
+            for profile_id, info in CLOUD_INIT_PROFILES.items()
+        ]
+
+    def get_profile_info(self, profile_id: str) -> Optional[Dict[str, Any]]:
+        """Gibt Details zu einem spezifischen Profil zurueck"""
+        if profile_id in CLOUD_INIT_PROFILES:
+            info = CLOUD_INIT_PROFILES[profile_id]
+            return {
+                "id": profile_id,
+                "name": info["name"],
+                "description": info["description"],
+                "packages": info.get("packages", []),
+                "groups": info.get("groups", []),
+                "services": info.get("services", []),
+                "sysctl": info.get("sysctl", {}),
+                "apt_sources": info.get("apt_sources", {}),
+            }
+        return None
+
+    def generate_user_data(
+        self,
+        profile: CloudInitProfile,
+        hostname: str,
+        additional_packages: Optional[List[str]] = None,
+        additional_ssh_keys: Optional[List[str]] = None,
+        additional_runcmd: Optional[List[str]] = None,
+        enable_phone_home: bool = True,
+    ) -> str:
+        """
+        Generiert Cloud-Init User-Data YAML fuer ein Profil.
+
+        Args:
+            profile: Das zu verwendende Cloud-Init Profil
+            hostname: Hostname der VM
+            additional_packages: Zusaetzliche Pakete
+            additional_ssh_keys: Zusaetzliche SSH-Keys
+            additional_runcmd: Zusaetzliche Befehle nach dem Boot
+            enable_phone_home: Phone-Home Callback aktivieren
+
+        Returns:
+            Cloud-Init User-Data als YAML-String
+        """
+        if profile == CloudInitProfile.NONE or not profile:
+            return ""
+
+        profile_key = profile.value if isinstance(profile, CloudInitProfile) else profile
+        profile_info = CLOUD_INIT_PROFILES.get(profile_key, {})
+
+        # Basis-Konfiguration
+        user_data: Dict[str, Any] = {
+            "hostname": hostname,
+            "manage_etc_hosts": True,
+            "preserve_hostname": False,
+            "locale": "de_DE.UTF-8",
+            "locale_configfile": "/etc/locale.gen",
+            "timezone": "Europe/Berlin",
+            "package_update": True,
+            "package_upgrade": True,
+        }
+
+        # SSH-Keys
+        ssh_keys = list(self.DEFAULT_SSH_KEYS)
+        if additional_ssh_keys:
+            ssh_keys.extend(additional_ssh_keys)
+
+        # User-Gruppen basierend auf Profil
+        user_groups = ["sudo", "users", "adm", "systemd-journal"]
+        profile_groups = profile_info.get("groups", [])
+        if profile_groups:
+            user_groups.extend(profile_groups)
+
+        user_data["users"] = [
+            {
+                "name": "darthvaper",
+                "gecos": "Homelab Admin",
+                "groups": user_groups,
+                "shell": "/bin/bash",
+                "sudo": "ALL=(ALL) NOPASSWD:ALL",
+                "lock_passwd": True,
+                "ssh_authorized_keys": ssh_keys,
+            }
+        ]
+
+        # SSH Hardening
+        user_data["ssh_pwauth"] = False
+        user_data["disable_root"] = True
+
+        # Pakete
+        packages = ["qemu-guest-agent", "curl", "wget", "wtmpdb", "locales"]
+        packages.extend(profile_info.get("packages", []))
+        if additional_packages:
+            packages.extend(additional_packages)
+        user_data["packages"] = list(set(packages))
+
+        # APT Sources (fuer Docker, GitLab Runner, etc.)
+        apt_sources = profile_info.get("apt_sources", {})
+        if apt_sources:
+            user_data["apt"] = {"sources": {}}
+            for source_name, source_config in apt_sources.items():
+                user_data["apt"]["sources"][source_name] = {
+                    "source": source_config["source"],
+                }
+                if "keyid" in source_config:
+                    user_data["apt"]["sources"][source_name]["keyid"] = source_config["keyid"]
+                if "keyring" in source_config:
+                    user_data["apt"]["sources"][source_name]["keyserver"] = "hkp://keyserver.ubuntu.com:80"
+
+        # Write Files (Profil-spezifisch)
+        write_files = []
+
+        # Login Welcome Script (profile.d) - zeigt Last Login + Banner bei jedem Login
+        welcome_script = '''#!/bin/bash
+# Login Welcome - Ansible Commander
+# Wird bei jedem Login ausgefuehrt
+
+# Nur bei interaktiven Shells
+[[ $- != *i* ]] && return
+
+# Bildschirm leeren
+clear
+
+# Last Login Info (vorheriger Login, nicht aktueller)
+# Zweite Zeile = vorheriger Login (erste Zeile ist aktueller)
+LAST_INFO=$(last -2 -F $USER 2>/dev/null | sed -n '2p')
+if [ -n "$LAST_INFO" ] && [[ "$LAST_INFO" != *"wtmpdb begins"* ]]; then
+    LAST_IP=$(echo "$LAST_INFO" | awk '{print $3}')
+    LAST_DATE=$(echo "$LAST_INFO" | awk '{print $4, $5, $6, $7, $8}')
+
+    # Falls IP ein tty ist, als "console" anzeigen
+    if [[ "$LAST_IP" == pts/* ]] || [[ "$LAST_IP" == tty* ]]; then
+        LAST_IP="console"
+    fi
+
+    echo "Last login: $LAST_DATE from $LAST_IP"
+    echo ""
+fi
+
+# OS-Info laden
+. /etc/os-release 2>/dev/null || PRETTY_NAME="Linux"
+
+# Banner anzeigen
+cat << EOF
+===============================================
+   Homelab VM - Managed by Ansible Commander
+===============================================
+
+Hostname: $(hostname)
+System:   ${PRETTY_NAME}
+Admin:    darthvaper
+
+Useful commands:
+  htop          - Process monitor
+  btop          - Resource monitor
+  journalctl -f - Live system logs
+
+===============================================
+EOF
+'''
+        write_files.append({
+            "path": "/etc/profile.d/00-welcome.sh",
+            "content": welcome_script,
+            "permissions": "0755",
+        })
+
+        # MOTD deaktivieren (wir nutzen profile.d stattdessen)
+        write_files.append({
+            "path": "/etc/motd",
+            "content": "",
+            "permissions": "0644",
+        })
+
+        # Locale-Generierung sicherstellen
+        write_files.append({
+            "path": "/etc/locale.gen",
+            "content": "de_DE.UTF-8 UTF-8\nen_US.UTF-8 UTF-8\n",
+            "permissions": "0644",
+        })
+
+        profile_write_files = profile_info.get("write_files", [])
+        if profile_write_files:
+            write_files.extend(profile_write_files)
+
+        # Sysctl Settings
+        sysctl_settings = profile_info.get("sysctl", {})
+        if sysctl_settings:
+            sysctl_content = "\n".join([f"{k} = {v}" for k, v in sysctl_settings.items()])
+            write_files.append({
+                "path": f"/etc/sysctl.d/99-{profile_key}.conf",
+                "content": f"# Cloud-Init Profile: {profile_key}\n{sysctl_content}\n",
+            })
+
+        # Limits (fuer Database-Profil)
+        limits = profile_info.get("limits", [])
+        if limits:
+            write_files.append({
+                "path": "/etc/security/limits.d/99-cloud-init.conf",
+                "content": "\n".join(limits) + "\n",
+            })
+
+        if write_files:
+            user_data["write_files"] = write_files
+
+        # Run Commands
+        runcmd = []
+
+        # Locale generieren (muss frueh passieren)
+        runcmd.append("locale-gen")
+        runcmd.append("update-locale LANG=de_DE.UTF-8")
+
+        # Sysctl laden wenn vorhanden
+        if sysctl_settings:
+            runcmd.append("sysctl --system")
+
+        # Services aktivieren
+        services = profile_info.get("services", [])
+        for service in services:
+            runcmd.append(f"systemctl enable {service}")
+            runcmd.append(f"systemctl start {service}")
+
+        # QEMU Guest Agent immer aktivieren
+        runcmd.extend([
+            "systemctl enable qemu-guest-agent",
+            "systemctl start qemu-guest-agent",
+        ])
+
+        # Profil-spezifische Extra-Commands
+        extra_runcmd = profile_info.get("runcmd_extra", [])
+        if extra_runcmd:
+            runcmd.extend(extra_runcmd)
+
+        # Zusaetzliche Befehle
+        if additional_runcmd:
+            runcmd.extend(additional_runcmd)
+
+        # Phone Home Callback
+        if enable_phone_home:
+            phone_home_cmd = f'''curl -sf -X POST "{self.PHONE_HOME_URL}" \\
+  -H "Content-Type: application/json" \\
+  -d '{{"hostname": "$(hostname)", "instance_id": "$(cat /var/lib/cloud/data/instance-id 2>/dev/null || echo unknown)", "ip_address": "$(hostname -I | awk '{{print $1}}')", "status": "completed", "timestamp": "$(date -Iseconds)"}}' \\
+  || echo "Phone-home callback failed"'''
+            runcmd.append(phone_home_cmd)
+
+        if runcmd:
+            user_data["runcmd"] = runcmd
+
+        # Phone Home (natives Cloud-Init Modul als Backup)
+        if enable_phone_home:
+            user_data["phone_home"] = {
+                "url": self.PHONE_HOME_URL,
+                "post": ["instance_id", "hostname", "fqdn"],
+                "tries": 3,
+            }
+
+        # Final message
+        user_data["final_message"] = f"Cloud-Init completed for {hostname} with profile '{profile_key}'"
+
+        # YAML generieren mit #cloud-config Header
+        yaml_content = yaml.dump(user_data, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        return f"#cloud-config\n{yaml_content}"
+
+    def generate_merged_config(
+        self,
+        profiles: List[CloudInitProfile],
+        hostname: str,
+        additional_packages: Optional[List[str]] = None,
+        additional_ssh_keys: Optional[List[str]] = None,
+        additional_runcmd: Optional[List[str]] = None,
+    ) -> str:
+        """
+        Generiert Cloud-Init Config durch Zusammenfuehren mehrerer Profile.
+
+        Args:
+            profiles: Liste von Profilen die kombiniert werden sollen
+            hostname: Hostname der VM
+            additional_packages: Zusaetzliche Pakete
+            additional_ssh_keys: Zusaetzliche SSH-Keys
+            additional_runcmd: Zusaetzliche Befehle
+
+        Returns:
+            Kombinierte Cloud-Init User-Data als YAML-String
+        """
+        merged_packages = set()
+        merged_groups = set(["sudo", "users", "adm", "systemd-journal"])
+        merged_services = set()
+        merged_sysctl = {}
+        merged_apt_sources = {}
+        merged_write_files = []
+        merged_runcmd_extra = []
+        merged_limits = []
+
+        for profile in profiles:
+            if profile == CloudInitProfile.NONE:
+                continue
+
+            profile_key = profile.value if isinstance(profile, CloudInitProfile) else profile
+            profile_info = CLOUD_INIT_PROFILES.get(profile_key, {})
+
+            merged_packages.update(profile_info.get("packages", []))
+            merged_groups.update(profile_info.get("groups", []))
+            merged_services.update(profile_info.get("services", []))
+            merged_sysctl.update(profile_info.get("sysctl", {}))
+            merged_apt_sources.update(profile_info.get("apt_sources", {}))
+            merged_write_files.extend(profile_info.get("write_files", []))
+            merged_runcmd_extra.extend(profile_info.get("runcmd_extra", []))
+            merged_limits.extend(profile_info.get("limits", []))
+
+        # Basis-Konfiguration
+        user_data: Dict[str, Any] = {
+            "hostname": hostname,
+            "manage_etc_hosts": True,
+            "preserve_hostname": False,
+            "locale": "de_DE.UTF-8",
+            "locale_configfile": "/etc/locale.gen",
+            "timezone": "Europe/Berlin",
+            "package_update": True,
+            "package_upgrade": True,
+        }
+
+        # SSH Keys
+        ssh_keys = list(self.DEFAULT_SSH_KEYS)
+        if additional_ssh_keys:
+            ssh_keys.extend(additional_ssh_keys)
+
+        user_data["users"] = [
+            {
+                "name": "darthvaper",
+                "gecos": "Homelab Admin",
+                "groups": list(merged_groups),
+                "shell": "/bin/bash",
+                "sudo": "ALL=(ALL) NOPASSWD:ALL",
+                "lock_passwd": True,
+                "ssh_authorized_keys": ssh_keys,
+            }
+        ]
+
+        user_data["ssh_pwauth"] = False
+        user_data["disable_root"] = True
+
+        # Pakete
+        packages = {"qemu-guest-agent", "curl", "wget", "wtmpdb", "locales"}
+        packages.update(merged_packages)
+        if additional_packages:
+            packages.update(additional_packages)
+        user_data["packages"] = list(packages)
+
+        # APT Sources
+        if merged_apt_sources:
+            user_data["apt"] = {"sources": merged_apt_sources}
+
+        # Write Files
+        write_files = list(merged_write_files)
+
+        # Login Welcome Script (profile.d) - zeigt Last Login + Banner bei jedem Login
+        welcome_script = '''#!/bin/bash
+# Login Welcome - Ansible Commander
+# Wird bei jedem Login ausgefuehrt
+
+# Nur bei interaktiven Shells
+[[ $- != *i* ]] && return
+
+# Bildschirm leeren
+clear
+
+# Last Login Info (vorheriger Login, nicht aktueller)
+# Zweite Zeile = vorheriger Login (erste Zeile ist aktueller)
+LAST_INFO=$(last -2 -F $USER 2>/dev/null | sed -n '2p')
+if [ -n "$LAST_INFO" ] && [[ "$LAST_INFO" != *"wtmpdb begins"* ]]; then
+    LAST_IP=$(echo "$LAST_INFO" | awk '{print $3}')
+    LAST_DATE=$(echo "$LAST_INFO" | awk '{print $4, $5, $6, $7, $8}')
+
+    # Falls IP ein tty ist, als "console" anzeigen
+    if [[ "$LAST_IP" == pts/* ]] || [[ "$LAST_IP" == tty* ]]; then
+        LAST_IP="console"
+    fi
+
+    echo "Last login: $LAST_DATE from $LAST_IP"
+    echo ""
+fi
+
+# OS-Info laden
+. /etc/os-release 2>/dev/null || PRETTY_NAME="Linux"
+
+# Banner anzeigen
+cat << EOF
+===============================================
+   Homelab VM - Managed by Ansible Commander
+===============================================
+
+Hostname: $(hostname)
+System:   ${PRETTY_NAME}
+Admin:    darthvaper
+
+Useful commands:
+  htop          - Process monitor
+  btop          - Resource monitor
+  journalctl -f - Live system logs
+
+===============================================
+EOF
+'''
+        write_files.append({
+            "path": "/etc/profile.d/00-welcome.sh",
+            "content": welcome_script,
+            "permissions": "0755",
+        })
+
+        # MOTD deaktivieren (wir nutzen profile.d stattdessen)
+        write_files.append({
+            "path": "/etc/motd",
+            "content": "",
+            "permissions": "0644",
+        })
+
+        # Locale-Generierung sicherstellen
+        write_files.append({
+            "path": "/etc/locale.gen",
+            "content": "de_DE.UTF-8 UTF-8\nen_US.UTF-8 UTF-8\n",
+            "permissions": "0644",
+        })
+
+        if merged_sysctl:
+            sysctl_content = "\n".join([f"{k} = {v}" for k, v in merged_sysctl.items()])
+            write_files.append({
+                "path": "/etc/sysctl.d/99-cloud-init.conf",
+                "content": f"# Cloud-Init merged profiles\n{sysctl_content}\n",
+            })
+        if merged_limits:
+            write_files.append({
+                "path": "/etc/security/limits.d/99-cloud-init.conf",
+                "content": "\n".join(merged_limits) + "\n",
+            })
+        if write_files:
+            user_data["write_files"] = write_files
+
+        # Run Commands
+        runcmd = []
+
+        # Locale generieren (muss frueh passieren)
+        runcmd.append("locale-gen")
+        runcmd.append("update-locale LANG=de_DE.UTF-8")
+
+        if merged_sysctl:
+            runcmd.append("sysctl --system")
+        for service in merged_services:
+            runcmd.append(f"systemctl enable {service}")
+            runcmd.append(f"systemctl start {service}")
+        runcmd.extend(["systemctl enable qemu-guest-agent", "systemctl start qemu-guest-agent"])
+        runcmd.extend(merged_runcmd_extra)
+        if additional_runcmd:
+            runcmd.extend(additional_runcmd)
+
+        # Phone Home
+        phone_home_cmd = f'''curl -sf -X POST "{self.PHONE_HOME_URL}" \\
+  -H "Content-Type: application/json" \\
+  -d '{{"hostname": "$(hostname)", "instance_id": "$(cat /var/lib/cloud/data/instance-id 2>/dev/null || echo unknown)", "ip_address": "$(hostname -I | awk '{{print $1}}')", "status": "completed", "timestamp": "$(date -Iseconds)"}}' \\
+  || echo "Phone-home callback failed"'''
+        runcmd.append(phone_home_cmd)
+
+        if runcmd:
+            user_data["runcmd"] = runcmd
+
+        user_data["phone_home"] = {
+            "url": self.PHONE_HOME_URL,
+            "post": ["instance_id", "hostname", "fqdn"],
+            "tries": 3,
+        }
+
+        profile_names = ", ".join([p.value for p in profiles if p != CloudInitProfile.NONE])
+        user_data["final_message"] = f"Cloud-Init completed for {hostname} with profiles: {profile_names}"
+
+        yaml_content = yaml.dump(user_data, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        return f"#cloud-config\n{yaml_content}"
+
+    def get_snippet_filename(self, vm_name: str) -> str:
+        """Gibt den Dateinamen fuer einen VM-spezifischen Cloud-Init Snippet zurueck"""
+        return f"cloud-init-{vm_name}.yaml"
+
+    def get_snippet_proxmox_ref(self, vm_name: str) -> str:
+        """Gibt die Proxmox-Referenz fuer einen VM-spezifischen Cloud-Init Snippet zurueck"""
+        return f"{self.NAS_SNIPPETS_REF}/{self.get_snippet_filename(vm_name)}"
+
+    async def write_snippet_to_nas(
+        self,
+        vm_name: str,
+        content: str,
+        proxmox_node: str = "gandalf",
+    ) -> bool:
+        """
+        Schreibt einen Cloud-Init Snippet auf das NAS via SSH zum Proxmox-Node.
+
+        Args:
+            vm_name: Name der VM (wird fuer Dateiname verwendet)
+            content: Cloud-Init YAML Inhalt
+            proxmox_node: Proxmox-Node mit NAS-Zugriff
+
+        Returns:
+            True bei Erfolg, False bei Fehler
+        """
+        filename = self.get_snippet_filename(vm_name)
+        remote_path = f"{self.NAS_SNIPPETS_PATH}/{filename}"
+
+        try:
+            # Schreibe Content in temporaere Datei
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+                f.write(content)
+                temp_path = f.name
+
+            # Kopiere via SCP zum Proxmox-Node
+            node_ip = self._get_node_ip(proxmox_node)
+            scp_cmd = [
+                "scp",
+                "-i", "/root/.ssh/ansible_id",
+                "-o", "StrictHostKeyChecking=no",
+                "-o", "BatchMode=yes",
+                temp_path,
+                f"root@{node_ip}:{remote_path}"
+            ]
+
+            result = subprocess.run(scp_cmd, capture_output=True, text=True, timeout=30)
+
+            # Temporaere Datei loeschen
+            os.unlink(temp_path)
+
+            if result.returncode != 0:
+                print(f"SCP Fehler: {result.stderr}")
+                return False
+
+            print(f"Cloud-Init Snippet {filename} erfolgreich auf NAS geschrieben")
+            return True
+
+        except Exception as e:
+            print(f"Fehler beim Schreiben des Cloud-Init Snippets: {e}")
+            return False
+
+    async def delete_snippet_from_nas(
+        self,
+        vm_name: str,
+        proxmox_node: str = "gandalf",
+    ) -> bool:
+        """
+        Loescht einen Cloud-Init Snippet vom NAS.
+
+        Args:
+            vm_name: Name der VM
+            proxmox_node: Proxmox-Node mit NAS-Zugriff
+
+        Returns:
+            True bei Erfolg oder wenn Datei nicht existiert
+        """
+        filename = self.get_snippet_filename(vm_name)
+        remote_path = f"{self.NAS_SNIPPETS_PATH}/{filename}"
+
+        try:
+            node_ip = self._get_node_ip(proxmox_node)
+            ssh_cmd = [
+                "ssh",
+                "-i", "/root/.ssh/ansible_id",
+                "-o", "StrictHostKeyChecking=no",
+                "-o", "BatchMode=yes",
+                f"root@{node_ip}",
+                f"rm -f {remote_path}"
+            ]
+
+            result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                print(f"SSH Fehler beim Loeschen: {result.stderr}")
+                return False
+
+            print(f"Cloud-Init Snippet {filename} vom NAS geloescht")
+            return True
+
+        except Exception as e:
+            print(f"Fehler beim Loeschen des Cloud-Init Snippets: {e}")
+            return False
+
+    def _get_node_ip(self, node_name: str) -> str:
+        """Gibt die IP-Adresse eines Proxmox-Nodes zurueck"""
+        node_ips = {
+            "aragorn": "192.168.60.10",
+            "gimli": "192.168.60.11",
+            "legolas": "192.168.60.12",
+            "boromir": "192.168.60.14",
+            "gandalf": "192.168.60.15",
+            "frodo": "192.168.60.16",
+        }
+        return node_ips.get(node_name, "192.168.60.15")  # Default: gandalf
+
+
+# Singleton-Instanz
+cloud_init_service = CloudInitService()

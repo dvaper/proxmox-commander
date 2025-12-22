@@ -1,0 +1,42 @@
+"""
+User Model
+"""
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+
+from app.database import Base
+
+
+class User(Base):
+    """User für Authentication"""
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(50), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=True)
+
+    # Rollen-Felder
+    is_admin = Column(Boolean, default=False)  # Legacy, wird zu is_super_admin migriert
+    is_super_admin = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+
+    # Zeitstempel
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_login = Column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    group_access = relationship(
+        "UserGroupAccess",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )
+    playbook_access = relationship(
+        "UserPlaybookAccess",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )
+    executions = relationship("Execution", back_populates="user")

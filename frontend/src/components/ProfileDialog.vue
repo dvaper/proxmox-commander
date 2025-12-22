@@ -1,0 +1,255 @@
+<template>
+  <v-dialog v-model="dialog" max-width="600" persistent>
+    <v-card>
+      <v-toolbar color="primary" dark flat>
+        <v-toolbar-title>Mein Profil</v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-btn icon @click="dialog = false">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-toolbar>
+
+      <v-card-text>
+        <v-tabs v-model="tab" bg-color="transparent">
+          <v-tab value="profile">Profil</v-tab>
+          <v-tab value="access">Berechtigungen</v-tab>
+          <v-tab value="password">Passwort ändern</v-tab>
+        </v-tabs>
+
+        <v-window v-model="tab" class="mt-4">
+          <!-- Tab: Profil -->
+          <v-window-item value="profile">
+            <v-list density="comfortable">
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-avatar color="primary" size="48">
+                    <v-icon>mdi-account</v-icon>
+                  </v-avatar>
+                </template>
+                <v-list-item-title class="text-h6">
+                  {{ authStore.user?.username }}
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  <v-chip
+                    size="small"
+                    :color="authStore.isSuperAdmin ? 'warning' : 'grey'"
+                    class="mt-1"
+                  >
+                    {{ authStore.isSuperAdmin ? 'Super-Admin' : 'Benutzer' }}
+                  </v-chip>
+                </v-list-item-subtitle>
+              </v-list-item>
+
+              <v-divider class="my-3"></v-divider>
+
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-icon>mdi-email</v-icon>
+                </template>
+                <v-list-item-title>E-Mail</v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ authStore.user?.email || 'Nicht angegeben' }}
+                </v-list-item-subtitle>
+              </v-list-item>
+
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-icon>mdi-calendar</v-icon>
+                </template>
+                <v-list-item-title>Erstellt am</v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ formatDate(authStore.user?.created_at) }}
+                </v-list-item-subtitle>
+              </v-list-item>
+
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-icon>mdi-login</v-icon>
+                </template>
+                <v-list-item-title>Letzter Login</v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ formatDate(authStore.user?.last_login) || 'Unbekannt' }}
+                </v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+          </v-window-item>
+
+          <!-- Tab: Berechtigungen -->
+          <v-window-item value="access">
+            <v-alert
+              v-if="authStore.isSuperAdmin"
+              type="success"
+              variant="tonal"
+              class="mb-4"
+            >
+              <v-icon start>mdi-shield-crown</v-icon>
+              Als Super-Admin haben Sie Zugriff auf alle Ressourcen.
+            </v-alert>
+
+            <template v-else>
+              <div class="text-subtitle-1 mb-2">
+                <v-icon start>mdi-folder-multiple</v-icon>
+                Freigegebene Gruppen
+              </div>
+              <div v-if="authStore.accessibleGroups.length" class="mb-4">
+                <v-chip
+                  v-for="group in authStore.accessibleGroups"
+                  :key="group"
+                  size="small"
+                  class="mr-1 mb-1"
+                  color="primary"
+                  variant="outlined"
+                >
+                  {{ group }}
+                </v-chip>
+              </div>
+              <v-alert v-else type="info" variant="tonal" density="compact" class="mb-4">
+                Keine Gruppen freigegeben.
+              </v-alert>
+
+              <div class="text-subtitle-1 mb-2">
+                <v-icon start>mdi-script-text</v-icon>
+                Freigegebene Playbooks
+              </div>
+              <div v-if="authStore.accessiblePlaybooks.length">
+                <v-chip
+                  v-for="playbook in authStore.accessiblePlaybooks"
+                  :key="playbook"
+                  size="small"
+                  class="mr-1 mb-1"
+                  color="success"
+                  variant="outlined"
+                >
+                  {{ playbook }}
+                </v-chip>
+              </div>
+              <v-alert v-else type="info" variant="tonal" density="compact">
+                Keine Playbooks freigegeben.
+              </v-alert>
+            </template>
+          </v-window-item>
+
+          <!-- Tab: Passwort ändern -->
+          <v-window-item value="password">
+            <v-form ref="passwordForm" @submit.prevent="changePassword">
+              <v-text-field
+                v-model="passwordData.currentPassword"
+                label="Aktuelles Passwort"
+                type="password"
+                :rules="[v => !!v || 'Pflichtfeld']"
+                prepend-icon="mdi-lock"
+              ></v-text-field>
+
+              <v-text-field
+                v-model="passwordData.newPassword"
+                label="Neues Passwort"
+                type="password"
+                :rules="[
+                  v => !!v || 'Pflichtfeld',
+                  v => v.length >= 8 || 'Mindestens 8 Zeichen'
+                ]"
+                prepend-icon="mdi-lock-plus"
+              ></v-text-field>
+
+              <v-text-field
+                v-model="passwordData.confirmPassword"
+                label="Neues Passwort bestätigen"
+                type="password"
+                :rules="[
+                  v => !!v || 'Pflichtfeld',
+                  v => v === passwordData.newPassword || 'Passwörter stimmen nicht überein'
+                ]"
+                prepend-icon="mdi-lock-check"
+              ></v-text-field>
+
+              <v-btn
+                color="primary"
+                type="submit"
+                :loading="saving"
+                block
+                class="mt-4"
+              >
+                Passwort ändern
+              </v-btn>
+            </v-form>
+          </v-window-item>
+        </v-window>
+      </v-card-text>
+
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn color="error" variant="text" @click="logout">
+          <v-icon start>mdi-logout</v-icon>
+          Abmelden
+        </v-btn>
+        <v-btn @click="dialog = false">Schließen</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+</template>
+
+<script setup>
+import { ref, inject } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { formatDate } from '@/utils/formatting'
+
+const router = useRouter()
+const authStore = useAuthStore()
+const showSnackbar = inject('showSnackbar')
+
+const dialog = ref(false)
+const tab = ref('profile')
+const passwordForm = ref(null)
+const saving = ref(false)
+
+const passwordData = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+
+async function changePassword() {
+  const { valid } = await passwordForm.value.validate()
+  if (!valid) return
+
+  saving.value = true
+  try {
+    await authStore.changePassword(
+      passwordData.value.currentPassword,
+      passwordData.value.newPassword,
+      passwordData.value.confirmPassword
+    )
+    showSnackbar('Passwort erfolgreich geändert')
+    passwordData.value = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    }
+    tab.value = 'profile'
+  } catch (e) {
+    showSnackbar(e.response?.data?.detail || 'Fehler beim Ändern des Passworts', 'error')
+  } finally {
+    saving.value = false
+  }
+}
+
+function logout() {
+  authStore.logout()
+  dialog.value = false
+  router.push('/login')
+}
+
+// Public API
+function open() {
+  tab.value = 'profile'
+  passwordData.value = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  }
+  dialog.value = true
+}
+
+defineExpose({ open })
+</script>
