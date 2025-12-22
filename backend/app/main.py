@@ -10,10 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import init_db
-from app.routers import auth_router, inventory_router, playbooks_router, executions_router, users_router, settings_router, terraform_router, vm_templates_router, cloud_init_router, git_sync_router, setup_router
+from app.routers import auth_router, inventory_router, playbooks_router, executions_router, users_router, settings_router, terraform_router, vm_templates_router, cloud_init_router, setup_router
 from app.routers.websocket import router as websocket_router
 from app.services.inventory_sync_service import get_sync_service
-from app.services.git_sync_service import get_git_sync_service
 
 logger = logging.getLogger(__name__)
 
@@ -23,17 +22,6 @@ async def lifespan(app: FastAPI):
     """Startup und Shutdown Events"""
     # Startup
     await init_db()
-
-    # Git-Repository synchronisieren beim Start
-    git_sync_service = get_git_sync_service()
-    try:
-        result = await git_sync_service.sync()
-        if result.get("success"):
-            logger.info(f"Git-Sync beim Start: {result.get('message', 'OK')}")
-        else:
-            logger.warning(f"Git-Sync beim Start fehlgeschlagen: {result.get('error', 'Unbekannt')}")
-    except Exception as e:
-        logger.warning(f"Git-Sync beim Start übersprungen: {e}")
 
     # Background Inventory-Sync starten
     sync_service = get_sync_service()
@@ -73,7 +61,6 @@ app.include_router(settings_router)
 app.include_router(terraform_router)
 app.include_router(vm_templates_router)
 app.include_router(cloud_init_router)
-app.include_router(git_sync_router)
 app.include_router(setup_router)
 app.include_router(websocket_router)
 

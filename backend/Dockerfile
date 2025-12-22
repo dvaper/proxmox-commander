@@ -30,6 +30,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # App kopieren
 COPY app/ ./app/
 
+# Default-Daten (Playbooks, etc.)
+COPY default-data/ ./default-data/
+
+# Entrypoint Script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Datenverzeichnisse (werden zur Laufzeit gemountet)
 RUN mkdir -p /data/db /data/inventory /data/playbooks /data/roles /data/terraform /data/ssh
 
@@ -43,5 +50,5 @@ RUN git config --global --add safe.directory /repo \
 # Port
 EXPOSE 8000
 
-# Start
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start via Entrypoint (kopiert Default-Playbooks falls noetig)
+ENTRYPOINT ["/entrypoint.sh"]

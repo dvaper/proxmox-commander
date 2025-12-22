@@ -53,7 +53,7 @@
 
     <v-row>
       <!-- Schnellzugriff -->
-      <v-col cols="12" md="6">
+      <v-col cols="12" md="4">
         <v-card>
           <v-card-title>
             <v-icon start>mdi-lightning-bolt</v-icon>
@@ -74,8 +74,38 @@
         </v-card>
       </v-col>
 
+      <!-- Externe Dienste -->
+      <v-col cols="12" md="4">
+        <v-card>
+          <v-card-title>
+            <v-icon start>mdi-open-in-new</v-icon>
+            Externe Dienste
+          </v-card-title>
+          <v-card-text>
+            <v-list>
+              <v-list-item
+                prepend-icon="mdi-ip-network-outline"
+                title="NetBox IPAM"
+                subtitle="IP-Adressverwaltung"
+                :href="netboxUrl"
+                target="_blank"
+              >
+                <template v-slot:append>
+                  <v-icon size="small">mdi-open-in-new</v-icon>
+                </template>
+              </v-list-item>
+            </v-list>
+            <v-alert type="info" variant="tonal" density="compact" class="mt-2">
+              <div class="text-caption">
+                <strong>NetBox Login:</strong> admin / admin
+              </div>
+            </v-alert>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
       <!-- Letzte Ausführungen -->
-      <v-col cols="12" md="6">
+      <v-col cols="12" md="4">
         <v-card>
           <v-card-title>
             <v-icon start>mdi-history</v-icon>
@@ -112,12 +142,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/client'
 import { formatDate, getStatusColor, getStatusIcon } from '@/utils/formatting'
 
 const router = useRouter()
+
+// NetBox URL: gleicher Host, Port 8081
+const netboxUrl = computed(() => {
+  const host = window.location.hostname
+  return `http://${host}:8081`
+})
 
 const stats = ref({
   hosts: 0,
