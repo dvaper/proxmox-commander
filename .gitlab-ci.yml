@@ -15,6 +15,8 @@ variables:
     DOCKER_TLS_CERTDIR: ""
     DOCKER_HOST: tcp://docker:2375
   before_script:
+    # Warte bis Docker-Daemon bereit ist
+    - until docker info; do sleep 2; done
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $REGISTRY
 
 build-dpc-api:
