@@ -462,16 +462,10 @@ async def save_setup(config: SetupConfig):
     if not result.success:
         raise HTTPException(status_code=500, detail=result.error)
 
-    # Settings neu laden - kein Container-Restart noetig!
-    from app.config import reload_settings
-    try:
-        reload_settings(str(get_env_file_path()))
-        result.restart_required = False
-        result.message = "Konfiguration erfolgreich gespeichert und geladen."
-        logger.info("Settings wurden nach Setup neu geladen")
-    except Exception as e:
-        logger.warning(f"Settings konnten nicht neu geladen werden: {e}")
-        # Fallback: restart_required bleibt True
+    # Container-Restart ist erforderlich, damit die neuen Environment-Variablen
+    # von docker-compose geladen werden. Ein Hot-Reload innerhalb des laufenden
+    # Containers reicht nicht aus, da andere Module bereits Settings importiert haben.
+    # restart_required bleibt True (default)
 
     return result
 
