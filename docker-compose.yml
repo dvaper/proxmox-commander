@@ -4,7 +4,7 @@ services:
   # =============================================================================
 
   dpc-web:
-    image: 192.168.60.170:5050/darthvaper/docker-proxmox-commander/dpc-web:latest
+    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/dpc-web:latest
     container_name: proxmox-commander-web
     restart: unless-stopped
     ports:
@@ -17,7 +17,7 @@ services:
       - proxmox-commander
 
   dpc-api:
-    image: 192.168.60.170:5050/darthvaper/docker-proxmox-commander/dpc-api:latest
+    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/dpc-api:latest
     container_name: proxmox-commander-api
     restart: unless-stopped
     depends_on:

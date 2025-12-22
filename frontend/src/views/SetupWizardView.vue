@@ -19,16 +19,16 @@
                   <h2 class="text-h5 mb-4">Willkommen bei Proxmox Commander</h2>
                   <p class="text-body-1 text-grey-darken-1 mb-6">
                     Dieser Assistent hilft dir bei der Erstkonfiguration.
-                    Du benoetigst Zugriff auf deinen Proxmox VE Server mit einem API-Token.
+                    Du benötigst Zugriff auf deinen Proxmox VE Server mit einem API-Token.
                   </p>
 
                   <v-alert type="info" variant="tonal" class="text-left mb-4">
                     <div class="text-subtitle-2 mb-2">Voraussetzungen:</div>
                     <ul class="pl-4">
-                      <li>Proxmox VE Server - unterstuetzte Formate:
+                      <li>Proxmox VE Server - unterstützte Formate:
                         <ul class="pl-2 text-body-2">
-                          <li><code>192.168.1.100</code> - IP-Adresse (Port 8006 wird automatisch hinzugefuegt)</li>
-                          <li><code>proxmox.example.com</code> - Hostname (Port 8006 wird automatisch hinzugefuegt)</li>
+                          <li><code>192.168.1.100</code> - IP-Adresse (Port 8006 wird automatisch hinzugefügt)</li>
+                          <li><code>proxmox.example.com</code> - Hostname (Port 8006 wird automatisch hinzugefügt)</li>
                           <li><code>https://proxmox.example.com</code> - Reverse Proxy (Standard HTTPS Port 443)</li>
                         </ul>
                       </li>
@@ -40,7 +40,7 @@
                   <v-alert type="warning" variant="tonal" class="text-left">
                     <div class="text-subtitle-2">Noch keinen API-Token?</div>
                     <p class="text-body-2 mb-0">
-                      Kein Problem! Im naechsten Schritt findest du eine ausfuehrliche Anleitung
+                      Kein Problem! Im nächsten Schritt findest du eine ausführliche Anleitung
                       zur Erstellung eines API-Tokens in Proxmox.
                     </p>
                   </v-alert>
@@ -57,7 +57,7 @@
                     Proxmox Verbindung
                   </h3>
 
-                  <!-- Hilfe-Bereich fuer Token-Erstellung -->
+                  <!-- Hilfe-Bereich für Token-Erstellung -->
                   <v-expansion-panels class="mb-4">
                     <v-expansion-panel>
                       <v-expansion-panel-title>
@@ -96,9 +96,9 @@
                           <p class="mb-3">
                             <code>Datacenter</code> &rarr; <code>Permissions</code> &rarr; <code>Add</code> &rarr; <code>User Permission</code><br>
                             <ul class="pl-4">
-                              <li>Path: <code>/</code> (Root fuer alle Rechte)</li>
+                              <li>Path: <code>/</code> (Root für alle Rechte)</li>
                               <li>User: <code>terraform@pve</code></li>
-                              <li>Role: <code>Administrator</code> (oder eingeschraenkte Rolle)</li>
+                              <li>Role: <code>Administrator</code> (oder eingeschränkte Rolle)</li>
                             </ul>
                           </p>
 
@@ -117,7 +117,7 @@
                     label="Proxmox Host"
                     placeholder="192.168.1.100 oder https://proxmox.example.com"
                     prepend-inner-icon="mdi-ip-network"
-                    hint="Direkt: IP/Hostname (Port 8006 wird hinzugefuegt) | Reverse Proxy: https://hostname"
+                    hint="Direkt: IP/Hostname (Port 8006 wird hinzugefügt) | Reverse Proxy: https://hostname"
                     persistent-hint
                     variant="outlined"
                     density="compact"
@@ -166,7 +166,7 @@
                     class="mb-4"
                   ></v-checkbox>
 
-                  <!-- Verbindungstest - erscheint nur wenn alle Felder ausgefuellt -->
+                  <!-- Verbindungstest - erscheint nur wenn alle Felder ausgefüllt -->
                   <template v-if="canTest">
                     <v-divider class="my-4"></v-divider>
 
@@ -224,7 +224,7 @@
                       <v-expansion-panel-text>
                         <v-text-field
                           v-model="config.ansible_remote_user"
-                          label="SSH-Benutzer fuer Ansible"
+                          label="SSH-Benutzer für Ansible"
                           prepend-inner-icon="mdi-account"
                           hint="Benutzer auf den Ziel-VMs"
                           persistent-hint
@@ -257,7 +257,7 @@
                         <div v-if="netboxMode === 'integrated'">
                           <v-alert type="info" variant="tonal" density="compact" class="mb-4">
                             Das integrierte NetBox wird automatisch mit der Applikation gestartet.
-                            Ein API-Token wird fuer die Kommunikation benoetigt.
+                            Ein API-Token wird für die Kommunikation benötigt.
                           </v-alert>
 
                           <v-text-field
@@ -306,7 +306,7 @@
                             label="NetBox URL"
                             placeholder="https://netbox.example.com"
                             prepend-inner-icon="mdi-web"
-                            hint="Vollstaendige URL inkl. Protokoll"
+                            hint="Vollständige URL inkl. Protokoll"
                             persistent-hint
                             variant="outlined"
                             density="compact"
@@ -327,8 +327,8 @@
                         <!-- Kein NetBox -->
                         <div v-if="netboxMode === 'none'">
                           <v-alert type="info" variant="tonal" density="compact">
-                            Ohne NetBox ist keine automatische IP-Adressverwaltung verfuegbar.
-                            Du kannst NetBox spaeter in den Einstellungen konfigurieren.
+                            Ohne NetBox ist keine automatische IP-Adressverwaltung verfügbar.
+                            Du kannst NetBox später in den Einstellungen konfigurieren.
                           </v-alert>
                         </div>
                       </v-expansion-panel-text>
@@ -399,7 +399,7 @@
                   :disabled="saving"
                 >
                   <v-icon left>mdi-chevron-left</v-icon>
-                  Zurueck
+                  Zurück
                 </v-btn>
 
                 <v-spacer></v-spacer>
@@ -450,7 +450,7 @@
           </v-card>
         </v-dialog>
 
-        <!-- Erfolgs-Dialog (Fallback wenn Restart noetig) -->
+        <!-- Erfolgs-Dialog (Fallback wenn Restart nötig) -->
         <v-dialog v-model="showSuccessDialog" persistent max-width="500">
           <v-card>
             <v-card-title class="text-h5 bg-success text-white">
@@ -645,7 +645,7 @@ async function saveConfig() {
       netbox_url: netboxUrl,
     })
 
-    // Pruefen ob Konfiguration direkt geladen wurde (kein Restart noetig)
+    // Prüfen ob Konfiguration direkt geladen wurde (kein Restart nötig)
     if (response.data.restart_required === false) {
       // Direkt zur Login-Seite weiterleiten
       redirectingToLogin.value = true
