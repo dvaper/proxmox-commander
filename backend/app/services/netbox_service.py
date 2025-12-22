@@ -1,10 +1,12 @@
 """
 NetBox Service - Integration mit NetBox IPAM für IP-Management
+
+Alle VLANs und Prefixes werden dynamisch aus NetBox geladen.
+Die Konfiguration erfolgt direkt in NetBox (nicht in der Applikation).
 """
 import httpx
 from typing import Optional
 from app.config import settings
-from app.services.vlan_config import get_vlan, get_prefix, get_all_vlans, VLANS
 
 
 class NetBoxService:
@@ -24,21 +26,85 @@ class NetBoxService:
             raise ValueError("NetBox API Token nicht konfiguriert (NETBOX_TOKEN)")
 
     async def get_vlans(self) -> list[dict]:
-        """Gibt alle verfügbaren VLANs mit Info zurück"""
-        return get_all_vlans()
+        """
+        Holt alle VLANs aus NetBox.
+
+        Gibt VLANs zurück die einen zugehörigen Prefix haben.
+        """
+        self._check_token()
+
+        async with httpx.AsyncClient() as client:
+            # Alle Prefixes mit zugehörigen VLANs laden
+            response = await client.get(
+                f"{self.base_url}/api/ipam/prefixes/",
+                params={"limit": 100},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            result = []
+            for prefix_info in data["results"]:
+                vlan_info = prefix_info.get("vlan")
+                if vlan_info:
+                    vlan_id = vlan_info.get("vid", 0)
+                    prefix = prefix_info.get("prefix", "")
+
+                    # Bridge und Gateway aus VLAN-ID ableiten
+                    bridge = f"vmbr{vlan_id}"
+                    gateway = self._gateway_from_prefix(prefix)
+
+                    result.append({
+                        "id": vlan_id,
+                        "name": vlan_info.get("name", f"VLAN{vlan_id}"),
+                        "prefix": prefix,
+                        "bridge": bridge,
+                        "gateway": gateway,
+                    })
+
+            return sorted(result, key=lambda x: x["id"])
+
+    def _gateway_from_prefix(self, prefix: str) -> str:
+        """Leitet Gateway aus Prefix ab (erstes IP im Subnet)"""
+        if not prefix:
+            return ""
+        # prefix ist z.B. "192.168.60.0/24"
+        network = prefix.split("/")[0]
+        octets = network.split(".")
+        if len(octets) == 4:
+            octets[3] = "1"  # Gateway ist typischerweise .1
+            return ".".join(octets)
+        return ""
+
+    async def get_prefix_for_vlan(self, vlan: int) -> Optional[str]:
+        """Holt den Prefix aus NetBox für ein VLAN"""
+        self._check_token()
+
+        async with httpx.AsyncClient() as client:
+            # Prefix mit VLAN-ID suchen
+            response = await client.get(
+                f"{self.base_url}/api/ipam/prefixes/",
+                params={"vlan_vid": vlan},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if data["count"] > 0:
+                return data["results"][0]["prefix"]
+            return None
 
     async def get_prefix_id(self, vlan: int) -> Optional[int]:
         """Holt die Prefix-ID aus NetBox für ein VLAN"""
         self._check_token()
 
-        prefix = get_prefix(vlan)
-        if not prefix:
-            return None
-
         async with httpx.AsyncClient() as client:
+            # Prefix mit VLAN-ID suchen
             response = await client.get(
                 f"{self.base_url}/api/ipam/prefixes/",
-                params={"prefix": prefix},
+                params={"vlan_vid": vlan},
                 headers=self.headers,
                 timeout=10.0,
             )
@@ -85,9 +151,9 @@ class NetBoxService:
         """Holt belegte IPs aus NetBox für ein VLAN"""
         self._check_token()
 
-        prefix = get_prefix(vlan)
+        prefix = await self.get_prefix_for_vlan(vlan)
         if not prefix:
-            raise ValueError(f"VLAN {vlan} nicht konfiguriert")
+            raise ValueError(f"VLAN {vlan} nicht in NetBox konfiguriert")
 
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -114,13 +180,6 @@ class NetBoxService:
     async def reserve_ip(self, ip_address: str, description: str, dns_name: str = "") -> dict:
         """Reserviert eine IP-Adresse in NetBox"""
         self._check_token()
-
-        # Bestimme VLAN aus IP
-        octets = ip_address.split(".")
-        vlan = int(octets[2])
-
-        if vlan not in VLANS:
-            raise ValueError(f"VLAN {vlan} nicht konfiguriert")
 
         async with httpx.AsyncClient() as client:
             # Prüfen ob IP bereits existiert
@@ -301,6 +360,53 @@ class NetBoxService:
             "vm_deleted": vm_deleted,
             "ip_deleted": ip_deleted,
         }
+
+    async def check_ipam_status(self) -> dict:
+        """
+        Prüft den IPAM-Status in NetBox.
+
+        Gibt zurück ob Prefixes konfiguriert sind.
+        Ohne Prefixes können keine freien IPs abgefragt werden.
+
+        Returns:
+            dict mit Status-Informationen
+        """
+        self._check_token()
+
+        result = {
+            "configured": False,
+            "prefixes_count": 0,
+            "vlans_count": 0,
+            "netbox_url": self.base_url,
+        }
+
+        try:
+            async with httpx.AsyncClient() as client:
+                # Prefixes zählen
+                response = await client.get(
+                    f"{self.base_url}/api/ipam/prefixes/",
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+                response.raise_for_status()
+                result["prefixes_count"] = response.json()["count"]
+
+                # VLANs zählen
+                response = await client.get(
+                    f"{self.base_url}/api/ipam/vlans/",
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+                response.raise_for_status()
+                result["vlans_count"] = response.json()["count"]
+
+                # Konfiguriert wenn mindestens ein Prefix existiert
+                result["configured"] = result["prefixes_count"] > 0
+
+        except Exception as e:
+            result["error"] = str(e)
+
+        return result
 
 
 # Singleton-Instanz

@@ -248,6 +248,35 @@
                 <v-radio label="Manuell eingeben" value="manual"></v-radio>
               </v-radio-group>
 
+              <!-- IPAM nicht konfiguriert Warnung -->
+              <v-alert
+                v-if="ipamError"
+                type="warning"
+                variant="tonal"
+                class="mt-2 mb-2"
+              >
+                <div>
+                  <strong>NetBox IPAM nicht konfiguriert</strong><br>
+                  <span class="text-caption">
+                    Für dieses VLAN wurde noch kein Prefix in NetBox angelegt.
+                    Bitte konfigurieren Sie die IP-Bereiche (Prefixes) direkt in NetBox.
+                  </span>
+                </div>
+                <div class="mt-2">
+                  <v-btn
+                    v-if="netboxUrl"
+                    color="warning"
+                    variant="elevated"
+                    size="small"
+                    :href="netboxUrl + '/ipam/prefixes/add/'"
+                    target="_blank"
+                  >
+                    <v-icon start>mdi-open-in-new</v-icon>
+                    NetBox IPAM öffnen
+                  </v-btn>
+                </div>
+              </v-alert>
+
               <v-select
                 v-if="ipMode === 'auto'"
                 v-model="selectedIP"
@@ -259,7 +288,10 @@
                 variant="outlined"
                 density="compact"
                 :loading="loadingIPs"
+                :disabled="ipamError"
                 class="mt-2"
+                :hint="availableIPs.length === 0 && !loadingIPs && !ipamError ? 'Keine freien IPs im ausgewählten VLAN' : ''"
+                persistent-hint
               ></v-select>
 
               <v-text-field
@@ -456,6 +488,8 @@ const cloudInitProfiles = ref([])
 const availableIPs = ref([])
 const selectedIP = ref(null)
 const ipMode = ref('auto')
+const ipamError = ref(false)
+const netboxUrl = ref(null)
 const validation = ref(null)
 const preview = ref(null)
 const loadingTemplates = ref(false)
@@ -548,6 +582,7 @@ async function open() {
   }
   selectedIP.value = null
   ipMode.value = 'auto'
+  ipamError.value = false
   validation.value = null
   preview.value = null
   selectedPreset.value = null
@@ -728,6 +763,7 @@ async function loadStoragePools() {
 
 async function loadAvailableIPs() {
   loadingIPs.value = true
+  ipamError.value = false
   try {
     const response = await api.get(`/api/terraform/available-ips/${config.value.vlan}?limit=250`)
     availableIPs.value = response.data
@@ -737,6 +773,18 @@ async function loadAvailableIPs() {
   } catch (e) {
     console.error('IPs laden fehlgeschlagen:', e)
     availableIPs.value = []
+    // Prüfen ob es ein "Prefix nicht gefunden" Fehler ist
+    const errorMsg = e.response?.data?.detail || ''
+    if (errorMsg.includes('Prefix') && errorMsg.includes('nicht')) {
+      ipamError.value = true
+      // NetBox URL laden für den Link
+      try {
+        const statusResponse = await api.get('/api/terraform/ipam/status')
+        netboxUrl.value = statusResponse.data.netbox_url
+      } catch {
+        // Ignorieren wenn Status nicht geladen werden kann
+      }
+    }
   } finally {
     loadingIPs.value = false
   }
