@@ -79,6 +79,18 @@
       <v-toolbar-title>{{ currentPageTitle }}</v-toolbar-title>
       <v-spacer></v-spacer>
 
+      <!-- Service Status Badge -->
+      <v-chip
+        :color="healthStatus.color"
+        size="small"
+        variant="tonal"
+        class="mr-2"
+        @click="showHealthDetails = true"
+      >
+        <v-icon start size="small">{{ healthStatus.icon }}</v-icon>
+        {{ healthStatus.label }}
+      </v-chip>
+
       <!-- User Menu -->
       <v-menu>
         <template v-slot:activator="{ props }">
@@ -132,6 +144,37 @@
       {{ snackbar.text }}
     </v-snackbar>
 
+    <!-- Health Status Dialog -->
+    <v-dialog v-model="showHealthDetails" max-width="400">
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <v-icon class="mr-2" :color="healthStatus.color">{{ healthStatus.icon }}</v-icon>
+          Service Status
+        </v-card-title>
+        <v-card-text>
+          <v-list density="compact">
+            <v-list-item v-for="(service, name) in healthData.services" :key="name">
+              <template v-slot:prepend>
+                <v-icon :color="getServiceColor(service.status)" size="small">
+                  {{ getServiceIcon(service.status) }}
+                </v-icon>
+              </template>
+              <v-list-item-title>{{ name.toUpperCase() }}</v-list-item-title>
+              <v-list-item-subtitle>{{ service.message }}</v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+          <v-alert v-if="healthData.status === 'starting'" type="info" variant="tonal" density="compact" class="mt-2">
+            Services werden gestartet. Dies kann einige Minuten dauern...
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="fetchHealth">Aktualisieren</v-btn>
+          <v-btn color="primary" @click="showHealthDetails = false">Schließen</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Changelog Dialog -->
     <v-dialog v-model="showChangelog" max-width="600">
       <v-card>
@@ -160,11 +203,12 @@
 </template>
 
 <script setup>
-import { ref, computed, provide } from 'vue'
+import { ref, computed, provide, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ProfileDialog from '@/components/ProfileDialog.vue'
 import changelog from '@/data/changelog.json'
+import axios from 'axios'
 
 const appVersion = __APP_VERSION__
 
@@ -175,6 +219,64 @@ const authStore = useAuthStore()
 const drawer = ref(true)
 const profileDialog = ref(null)
 const showChangelog = ref(false)
+const showHealthDetails = ref(false)
+
+// Health Status
+const healthData = ref({
+  status: 'unknown',
+  services: {}
+})
+
+let healthInterval = null
+
+const fetchHealth = async () => {
+  try {
+    const response = await axios.get('/api/health')
+    healthData.value = response.data
+  } catch (e) {
+    healthData.value = {
+      status: 'error',
+      services: { api: { status: 'error', message: 'API not reachable' } }
+    }
+  }
+}
+
+const healthStatus = computed(() => {
+  const status = healthData.value.status
+  const statusMap = {
+    healthy: { color: 'success', icon: 'mdi-check-circle', label: 'Online' },
+    starting: { color: 'warning', icon: 'mdi-loading mdi-spin', label: 'Starting...' },
+    degraded: { color: 'warning', icon: 'mdi-alert-circle', label: 'Degraded' },
+    error: { color: 'error', icon: 'mdi-close-circle', label: 'Error' },
+    unknown: { color: 'grey', icon: 'mdi-help-circle', label: 'Unknown' },
+  }
+  return statusMap[status] || statusMap.unknown
+})
+
+const getServiceColor = (status) => {
+  const colors = { healthy: 'success', starting: 'warning', degraded: 'warning', error: 'error' }
+  return colors[status] || 'grey'
+}
+
+const getServiceIcon = (status) => {
+  const icons = {
+    healthy: 'mdi-check-circle',
+    starting: 'mdi-loading mdi-spin',
+    degraded: 'mdi-alert-circle',
+    error: 'mdi-close-circle'
+  }
+  return icons[status] || 'mdi-help-circle'
+}
+
+onMounted(() => {
+  fetchHealth()
+  // Alle 30 Sekunden aktualisieren
+  healthInterval = setInterval(fetchHealth, 30000)
+})
+
+onUnmounted(() => {
+  if (healthInterval) clearInterval(healthInterval)
+})
 
 // Mapping für Seitentitel
 const pageTitles = {
