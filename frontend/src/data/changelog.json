@@ -1,5 +1,14 @@
 [
   {
+    "version": "v0.2.8",
+    "date": "2025-12-23",
+    "changes": {
+      "Bugfixes": [
+        "NetBox URL im VMDeploymentWizard korrigiert"
+      ]
+    }
+  },
+  {
     "version": "v0.2.7",
     "date": "2025-12-23",
     "changes": {
