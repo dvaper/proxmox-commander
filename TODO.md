@@ -2,11 +2,11 @@
 
 ## Setup-Wizard Verbesserungen
 
-- [ ] **App-Admin Panel nicht sichtbar genug**: Der "App Administrator" Bereich im Setup-Wizard ist in einem zugeklappten Expansion Panel versteckt. Benutzer uebersehen ihn leicht und koennen den Wizard abschliessen ohne ein Admin-Passwort zu setzen. **Loesung**: Panel standardmaessig offen ODER als separater Pflicht-Schritt VOR dem Speichern.
+- [x] **App-Admin Panel nicht sichtbar genug**: Der "App Administrator" Bereich im Setup-Wizard ist in einem zugeklappten Expansion Panel versteckt. **Geloest**: Panel ist jetzt standardmaessig offen + Warnhinweis wenn Passwort fehlt.
 
-- [ ] **Pflichtfeld deutlicher kennzeichnen**: App-Admin Passwort ist Pflichtfeld (min. 6 Zeichen), aber das ist nicht sofort ersichtlich. Bessere visuelle Kennzeichnung noetig (z.B. roter Stern, Warnhinweis).
+- [x] **Pflichtfeld deutlicher kennzeichnen**: App-Admin Passwort ist Pflichtfeld (min. 6 Zeichen). **Geloest**: Warnung oben im Step + "Pflicht"/"OK" Chip am Panel + Error-Farbe.
 
-- [ ] **NetBox Token Laenge pruefen**: Der Setup-Wizard generiert ein NetBox API-Token. Muss dieses Token (wie SECRET_KEY) auch eine Mindestlaenge haben? Aktuell 40 Zeichen hex - pruefen ob das ausreicht.
+- [x] **NetBox Token Laenge pruefen**: Der Setup-Wizard generiert ein NetBox API-Token mit 40 Zeichen hex. **Geprueft**: 40 hex chars ist NetBox Standard-Format (20 Bytes). SECRET_KEY braucht 50+, aber API-Token ist korrekt.
 
 ## Sicherheit
 
@@ -16,7 +16,7 @@
 
 - [x] **NetBox Status-Anzeige**: Status-Badge im UI zeigt NetBox-Zustand (Starting/Ready/Error) - implementiert in v0.2.4
 
-- [ ] **Status-Badge Beschriftung**: Die Status-Badge in der Titel-Bar zeigt nur "Online/Starting/Error" ohne Kontext. Nicht klar erkennbar *was* den Status hat. **Loesung**: Label hinzufuegen, z.B. "NetBox: Online" oder Tooltip mit Details.
+- [x] **Status-Badge Beschriftung**: Die Status-Badge in der Titel-Bar zeigt nur "Online/Starting/Error" ohne Kontext. **Geloest**: Label geaendert zu "Services: Online/Starting/Error".
 
 ## Technische Schulden (aus Sicherheitsaudit)
 
