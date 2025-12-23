@@ -67,6 +67,25 @@
 
             <!-- Scan-Ergebnisse -->
             <template v-if="proxmoxVlans.length > 0">
+              <!-- Hinweis wenn alle VLANs bereits existieren -->
+              <v-alert
+                v-if="newVlansCount === 0"
+                type="success"
+                variant="tonal"
+                class="mb-4"
+              >
+                <div class="d-flex align-center justify-space-between">
+                  <div>
+                    <v-icon start>mdi-check-circle</v-icon>
+                    <strong>Alle {{ proxmoxVlans.length }} VLANs sind bereits in NetBox vorhanden.</strong>
+                  </div>
+                  <v-btn size="small" variant="outlined" @click="activeTab = 'networks'">
+                    <v-icon start>mdi-arrow-right</v-icon>
+                    Zu Netzwerke
+                  </v-btn>
+                </div>
+              </v-alert>
+
               <v-data-table
                 v-model="selectedVlans"
                 :headers="importHeaders"
@@ -75,11 +94,15 @@
                 density="compact"
                 :items-per-page="15"
                 item-value="vlan_id"
+                :item-selectable="item => !item.exists_in_netbox"
               >
                 <template v-slot:top>
                   <v-toolbar flat density="compact">
                     <v-toolbar-title class="text-body-1">
                       {{ proxmoxVlans.length }} VLANs in Proxmox gefunden
+                      <span v-if="newVlansCount > 0" class="text-warning ml-2">
+                        ({{ newVlansCount }} neu)
+                      </span>
                     </v-toolbar-title>
                   </v-toolbar>
                 </template>
@@ -119,19 +142,21 @@
 
                 <template v-slot:item.prefix="{ item }">
                   <v-text-field
+                    v-if="!item.exists_in_netbox"
                     v-model="item.prefix"
                     variant="outlined"
                     density="compact"
                     hide-details
                     :placeholder="`192.168.${item.vlan_id}.0/24`"
                     style="min-width: 180px"
-                    :disabled="item.exists_in_netbox"
                   ></v-text-field>
+                  <span v-else class="text-grey">-</span>
                 </template>
               </v-data-table>
 
               <!-- Import Button -->
               <v-btn
+                v-if="newVlansCount > 0"
                 color="success"
                 @click="importVlans"
                 :loading="importing"
@@ -143,15 +168,15 @@
               </v-btn>
             </template>
 
-            <!-- Empty State -->
+            <!-- Empty State - keine VLANs in Proxmox -->
             <v-alert
               v-else-if="!scanning && scannedOnce"
-              type="success"
+              type="info"
               variant="tonal"
               class="mt-4"
             >
-              <v-icon start>mdi-check-circle</v-icon>
-              Keine neuen VLANs gefunden. Alle VLANs sind bereits in NetBox vorhanden.
+              <v-icon start>mdi-information</v-icon>
+              Keine VLANs in Proxmox gefunden. Pruefe die Bridge-Konfiguration auf den Nodes.
             </v-alert>
 
             <!-- Import-Ergebnis -->
@@ -193,9 +218,9 @@
               Uebersicht aller VLANs und Prefixes aus NetBox.
             </v-alert>
 
-            <!-- Empty State wenn keine VLANs -->
+            <!-- Empty State wenn weder VLANs noch Prefixes vorhanden -->
             <v-alert
-              v-if="vlans.length === 0 && !loadingVlans"
+              v-if="vlans.length === 0 && prefixes.length === 0 && !loadingVlans && !loadingPrefixes"
               type="warning"
               variant="tonal"
               class="mb-4"
@@ -203,7 +228,7 @@
               <div class="d-flex align-center justify-space-between">
                 <div>
                   <v-icon start>mdi-alert</v-icon>
-                  <strong>Noch keine VLANs vorhanden.</strong>
+                  <strong>Noch keine Netzwerke vorhanden.</strong>
                   Importiere zuerst VLANs aus Proxmox.
                 </div>
                 <v-btn size="small" variant="outlined" @click="activeTab = 'import'">
@@ -516,6 +541,12 @@ const selectedVlans = ref([])
 const scanning = ref(false)
 const importing = ref(false)
 const importResult = ref(null)
+
+// Anzahl neuer VLANs (nicht in NetBox)
+const newVlansCount = computed(() => {
+  return proxmoxVlans.value.filter(v => !v.exists_in_netbox).length
+})
+
 const importHeaders = [
   { title: 'VLAN ID', key: 'vlan_id', width: '100px' },
   { title: 'Bridge', key: 'bridge', width: '120px' },
