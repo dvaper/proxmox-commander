@@ -1,5 +1,43 @@
 [
   {
+    "version": "v0.2.6",
+    "date": "2025-12-23",
+    "changes": {
+      "Sicherheit": [
+        "Setup-Wizard aktualisiert bestehende Admin-Credentials beim Neustart"
+      ]
+    }
+  },
+  {
+    "version": "v0.2.5",
+    "date": "2025-12-23",
+    "changes": {
+      "UX": [
+        "Service Status-Badge zeigt 'Services: Online/Starting/Error'",
+        "Setup-Wizard: App-Admin Panel standardmaessig geoeffnet",
+        "Setup-Wizard: Pflichtfeld-Kennzeichnung fuer Admin-Passwort"
+      ]
+    }
+  },
+  {
+    "version": "v0.2.4",
+    "date": "2025-12-23",
+    "changes": {
+      "Features": [
+        "NetBox Status-Anzeige im UI (Starting/Ready/Error)"
+      ]
+    }
+  },
+  {
+    "version": "v0.2.3",
+    "date": "2025-12-22",
+    "changes": {
+      "Sicherheit": [
+        "NetBox SECRET_KEY Validierung (min. 50 Zeichen)"
+      ]
+    }
+  },
+  {
     "version": "v0.1.0",
     "date": "2025-12-22",
     "changes": {

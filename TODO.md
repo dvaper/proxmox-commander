@@ -10,7 +10,7 @@
 
 ## Sicherheit
 
-- [ ] **Bestehende admin/admin Credentials**: Wenn App vor v0.2.3 eingerichtet wurde, existiert bereits ein Admin-User mit Passwort "admin". Loesung: Passwort-Aenderung erzwingen beim ersten Login oder Hinweis im UI.
+- [x] **Bestehende admin/admin Credentials**: Wenn App vor v0.2.3 eingerichtet wurde, existiert bereits ein Admin-User mit Passwort "admin". **Geloest**: `create_default_admin()` aktualisiert jetzt bestehende Super-Admins wenn Credentials in .env geaendert wurden.
 
 ## UX Verbesserungen
 
