@@ -321,6 +321,7 @@ async def generate_terraform_tfvars(config: SetupConfig) -> None:
     Die tfvars enthaelt die Proxmox-Credentials und Default-Werte.
     """
     from pathlib import Path
+    from app.config import settings
 
     terraform_dir = Path(settings.terraform_dir)
     tfvars_path = terraform_dir / "terraform.tfvars"
@@ -369,7 +370,7 @@ default_dns           = ["192.168.2.1", "1.1.1.1"]
     logger.info(f"Terraform tfvars generiert: {tfvars_path}")
 
 
-def save_env_config(config: SetupConfig) -> SetupSaveResult:
+async def save_env_config(config: SetupConfig) -> SetupSaveResult:
     """Speichert die Konfiguration in die .env Datei"""
     env_path = get_env_file_path()
 
@@ -522,22 +523,25 @@ async def validate_proxmox(config: ProxmoxConfig):
 
 
 @router.post("/save", response_model=SetupSaveResult)
-async def save_setup(config: SetupConfig):
+async def save_setup(config: SetupConfig, force: bool = False):
     """
     Speichert die Setup-Konfiguration.
 
     Schreibt die Werte in die .env Datei.
     Nach dem Speichern muss der Container neu gestartet werden.
 
-    Dieser Endpoint ist ohne Authentifizierung zugaenglich,
-    funktioniert aber nur wenn die App noch nicht konfiguriert ist.
+    Dieser Endpoint ist ohne Authentifizierung zugaenglich.
+
+    Query-Parameter:
+    - force: Wenn true, wird das Setup auch bei bereits abgeschlossener
+             Konfiguration erneut durchgefuehrt (fuer Tests)
     """
     # Pruefen ob Setup bereits abgeschlossen
     status = check_setup_status()
-    if status.setup_complete:
+    if status.setup_complete and not force:
         raise HTTPException(
             status_code=403,
-            detail="Setup bereits abgeschlossen. Einstellungen koennen nur ueber die .env Datei geaendert werden."
+            detail="Setup bereits abgeschlossen. Mit ?force=true kann das Setup erneut durchgefuehrt werden."
         )
 
     # Proxmox-Verbindung validieren
@@ -556,7 +560,7 @@ async def save_setup(config: SetupConfig):
         )
 
     # Konfiguration speichern
-    result = save_env_config(config)
+    result = await save_env_config(config)
 
     if not result.success:
         raise HTTPException(status_code=500, detail=result.error)

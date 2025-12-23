@@ -773,7 +773,8 @@ async function saveConfig() {
   // Bei 'none': beide bleiben null
 
   try {
-    const response = await axios.post('/api/setup/save', {
+    // force=true erlaubt das erneute Ausfuehren des Setups (fuer Tests)
+    const response = await axios.post('/api/setup/save?force=true', {
       proxmox_host: config.value.proxmox_host,
       proxmox_token_id: config.value.proxmox_token_id,
       proxmox_token_secret: config.value.proxmox_token_secret,

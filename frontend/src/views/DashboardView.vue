@@ -255,6 +255,12 @@ const quickActions = [
     subtitle: 'hosts.yml neu einlesen',
     action: reloadInventory,
   },
+  {
+    icon: 'mdi-cog-sync',
+    title: 'Terraform tfvars regenerieren',
+    subtitle: 'Proxmox-Credentials neu schreiben',
+    action: regenerateTfvars,
+  },
 ]
 
 function getNodeStatusColor(status) {
@@ -324,6 +330,18 @@ async function reloadInventory() {
     await loadStats()
   } catch (e) {
     console.error('Reload fehlgeschlagen:', e)
+  }
+}
+
+async function regenerateTfvars() {
+  try {
+    const response = await api.post('/api/terraform/regenerate-tfvars')
+    if (response.data.success) {
+      alert('terraform.tfvars erfolgreich regeneriert!')
+    }
+  } catch (e) {
+    console.error('tfvars Regenerierung fehlgeschlagen:', e)
+    alert('Fehler: ' + (e.response?.data?.detail || e.message))
   }
 }
 

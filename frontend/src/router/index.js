@@ -127,14 +127,12 @@ router.beforeEach(async (to, from, next) => {
   }
 
   // Auf Setup-Seite aber Setup bereits abgeschlossen
+  // HINWEIS: Setup-Seite ist immer erreichbar fuer erneutes Setup (Testing)
+  // Der Backend-Endpoint verwendet ?force=true um das zu erlauben
   if (to.meta.isSetupPage) {
-    const setupComplete = await checkSetupStatus()
-
-    if (setupComplete) {
-      // Setup bereits abgeschlossen -> zum Login
-      next('/login')
-      return
-    }
+    // Setup-Seite immer erlauben - Backend regelt den Rest
+    // Cache invalidieren damit der neue Status geladen wird
+    invalidateSetupCache()
   }
 
   // Pruefen ob Authentifizierung erforderlich

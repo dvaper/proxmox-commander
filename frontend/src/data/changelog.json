@@ -1,5 +1,20 @@
 [
   {
+    "version": "v0.2.13",
+    "date": "2025-12-23",
+    "changes": {
+      "Features": [
+        "Neuer Endpoint: terraform.tfvars ohne Wizard regenerieren",
+        "Dashboard: Button 'Terraform tfvars regenerieren' im Schnellzugriff",
+        "Setup-Wizard kann jederzeit erneut ausgefuehrt werden (force=true)"
+      ],
+      "Bugfixes": [
+        "setup.py: Fehlender settings-Import in generate_terraform_tfvars",
+        "setup.py: save_env_config als async korrigiert"
+      ]
+    }
+  },
+  {
     "version": "v0.2.12",
     "date": "2025-12-23",
     "changes": {

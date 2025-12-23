@@ -1592,3 +1592,65 @@ async def rollback_to_history(
         raise HTTPException(status_code=400, detail=result.get("error", "Rollback fehlgeschlagen"))
 
     return RollbackResult(**result)
+
+
+# =============================================================================
+# Terraform Configuration Endpoints
+# =============================================================================
+
+class TfvarsResult(BaseModel):
+    """Ergebnis der tfvars-Generierung"""
+    success: bool
+    message: str
+    tfvars_path: Optional[str] = None
+    error: Optional[str] = None
+
+
+@router.post("/regenerate-tfvars", response_model=TfvarsResult)
+async def regenerate_terraform_tfvars(
+    current_user: User = Depends(get_current_admin_user),
+):
+    """
+    Regeneriert die terraform.tfvars aus den aktuellen Settings (nur Admin).
+
+    Nuetzlich wenn:
+    - Die tfvars-Datei fehlt oder beschaedigt ist
+    - Die Proxmox-Credentials geaendert wurden
+    - Der SSH-Key aktualisiert wurde
+
+    Liest die aktuellen Werte aus den Umgebungsvariablen/Settings.
+    """
+    from app.config import settings
+    from app.routers.setup import SetupConfig, generate_terraform_tfvars
+    from pathlib import Path
+
+    # Pruefen ob Proxmox konfiguriert ist
+    if not settings.proxmox_host or not settings.proxmox_token_id or not settings.proxmox_token_secret:
+        raise HTTPException(
+            status_code=400,
+            detail="Proxmox ist nicht konfiguriert. Bitte Setup-Wizard ausfuehren."
+        )
+
+    # SetupConfig aus aktuellen Settings erstellen
+    config = SetupConfig(
+        proxmox_host=settings.proxmox_host,
+        proxmox_token_id=settings.proxmox_token_id,
+        proxmox_token_secret=settings.proxmox_token_secret,
+        proxmox_verify_ssl=settings.proxmox_verify_ssl,
+        default_ssh_user=settings.default_ssh_user,
+        ansible_remote_user=settings.ansible_remote_user,
+    )
+
+    try:
+        await generate_terraform_tfvars(config)
+        tfvars_path = Path(settings.terraform_dir) / "terraform.tfvars"
+        return TfvarsResult(
+            success=True,
+            message="terraform.tfvars erfolgreich regeneriert",
+            tfvars_path=str(tfvars_path),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"tfvars-Generierung fehlgeschlagen: {str(e)}"
+        )
