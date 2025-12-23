@@ -324,6 +324,9 @@
                           <v-alert type="info" variant="tonal" density="compact" class="mb-4">
                             Das integrierte NetBox wird automatisch mit der Applikation gestartet.
                             Konfiguriere hier die Admin-Zugangsdaten.
+                            <br><br>
+                            <strong>Hinweis:</strong> Fuer eine komplette Neuinstallation (inkl. NetBox-Daten)
+                            verwende: <code>docker compose down -v</code>
                           </v-alert>
 
                           <v-text-field
@@ -613,6 +616,9 @@ const steps = [
   { title: 'Fertig', value: 4 },
 ]
 
+// Default NetBox API Token (muss mit docker-compose.yml SUPERUSER_API_TOKEN uebereinstimmen!)
+const DEFAULT_NETBOX_TOKEN = '0123456789abcdef0123456789abcdef01234567'
+
 // Config State
 const config = ref({
   proxmox_host: '',
@@ -621,7 +627,7 @@ const config = ref({
   proxmox_verify_ssl: false,
   ansible_remote_user: 'ansible',
   default_ssh_user: 'ansible',
-  netbox_token: '',
+  netbox_token: DEFAULT_NETBOX_TOKEN,  // Default-Token verwenden!
   netbox_url: '',
   // App Admin Credentials
   app_admin_user: 'admin',
@@ -685,10 +691,16 @@ function clearError(field) {
 }
 
 function generateNetboxToken() {
-  // Generiere einen 40-Zeichen hex Token (NetBox Standard-Format)
-  const array = new Uint8Array(20)
-  crypto.getRandomValues(array)
-  config.value.netbox_token = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
+  // Fuer integriertes NetBox: Default-Token verwenden (muss mit docker-compose.yml uebereinstimmen)
+  // Fuer externes NetBox: Zufaelligen Token generieren
+  if (netboxMode.value === 'integrated') {
+    config.value.netbox_token = DEFAULT_NETBOX_TOKEN
+  } else {
+    // Externes NetBox: Zufaelligen Token generieren
+    const array = new Uint8Array(20)
+    crypto.getRandomValues(array)
+    config.value.netbox_token = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
+  }
 }
 
 function validateProxmoxFields() {

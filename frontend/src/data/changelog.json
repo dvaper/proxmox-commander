@@ -12,7 +12,8 @@
         "setup.py: Fehlender settings-Import in generate_terraform_tfvars",
         "setup.py: save_env_config als async korrigiert",
         "Setup: Admin-User wird nach Hot-Reload erstellt (Login nach Wizard)",
-        "Setup: Robustere Admin-Erstellung mit expliziten Credentials"
+        "Setup: Robustere Admin-Erstellung mit expliziten Credentials",
+        "NetBox: Default-Token verwenden (403 Forbidden Fix)"
       ]
     }
   },
