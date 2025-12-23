@@ -1,5 +1,18 @@
 [
   {
+    "version": "v0.2.7",
+    "date": "2025-12-23",
+    "changes": {
+      "Features": [
+        "Automatische Versionierung aus Git-Tags",
+        "Automatische Changelog-Generierung aus Commits"
+      ],
+      "Sicherheit": [
+        "Setup-Wizard generiert NETBOX_SECRET_KEY mit 50+ Zeichen"
+      ]
+    }
+  },
+  {
     "version": "v0.2.6",
     "date": "2025-12-23",
     "changes": {

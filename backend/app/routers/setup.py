@@ -140,9 +140,17 @@ def check_setup_status() -> SetupStatus:
 
 
 def generate_secret_key() -> str:
-    """Generiert einen sicheren Secret Key"""
+    """Generiert einen sicheren Secret Key (64 hex chars)"""
     import secrets
     return secrets.token_hex(32)
+
+
+def generate_netbox_secret_key() -> str:
+    """Generiert einen sicheren NetBox Secret Key (mind. 50 Zeichen)"""
+    import secrets
+    # NetBox erfordert mind. 50 Zeichen - wir generieren 60 fuer Sicherheit
+    charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    return ''.join(secrets.choice(charset) for _ in range(60))
 
 
 async def validate_proxmox_connection(config: ProxmoxConfig) -> ProxmoxValidationResult:
@@ -318,6 +326,7 @@ def save_env_config(config: SetupConfig) -> SetupSaveResult:
     # Bestehende .env lesen falls vorhanden
     existing_lines = []
     existing_keys = set()
+    existing_values = {}
 
     if env_path.exists():
         try:
@@ -325,11 +334,19 @@ def save_env_config(config: SetupConfig) -> SetupSaveResult:
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith("#") and "=" in line:
-                        key = line.split("=")[0]
+                        key = line.split("=", 1)[0]
+                        value = line.split("=", 1)[1] if "=" in line else ""
                         existing_keys.add(key)
+                        existing_values[key] = value
                     existing_lines.append(line)
         except Exception as e:
             logger.warning(f"Konnte bestehende .env nicht lesen: {e}")
+
+    # NetBox Secret Key pruefen/generieren (mind. 50 Zeichen erforderlich)
+    netbox_secret_key = existing_values.get("NETBOX_SECRET_KEY", "")
+    if len(netbox_secret_key) < 50:
+        netbox_secret_key = generate_netbox_secret_key()
+        logger.info("Neuer NETBOX_SECRET_KEY generiert (mind. 50 Zeichen)")
 
     # Neue Werte
     new_values = {
@@ -348,6 +365,8 @@ def save_env_config(config: SetupConfig) -> SetupSaveResult:
         "APP_ADMIN_USER": config.app_admin_user,
         "APP_ADMIN_PASSWORD": config.app_admin_password,
         "APP_ADMIN_EMAIL": config.app_admin_email,
+        # NetBox Secret Key (mind. 50 Zeichen)
+        "NETBOX_SECRET_KEY": netbox_secret_key,
     }
 
     if config.netbox_token:
