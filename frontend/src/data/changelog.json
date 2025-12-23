@@ -10,7 +10,8 @@
       ],
       "Bugfixes": [
         "setup.py: Fehlender settings-Import in generate_terraform_tfvars",
-        "setup.py: save_env_config als async korrigiert"
+        "setup.py: save_env_config als async korrigiert",
+        "Setup: Admin-User wird nach Hot-Reload erstellt (Login nach Wizard)"
       ]
     }
   },

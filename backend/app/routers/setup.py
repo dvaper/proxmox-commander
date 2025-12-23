@@ -569,8 +569,14 @@ async def save_setup(config: SetupConfig, force: bool = False):
     # Da PROXMOX_* nicht mehr in docker-compose.yml stehen, werden sie
     # direkt aus der .env Datei gelesen und koennen hot-reloaded werden.
     from app.config import reload_settings
+    from app.database import create_default_admin
     try:
         reload_settings(str(get_env_file_path()))
+
+        # Admin-User erstellen/aktualisieren mit den neuen Credentials
+        await create_default_admin()
+        logger.info("Admin-User nach Setup erstellt/aktualisiert")
+
         result.restart_required = False
         result.message = "Konfiguration erfolgreich gespeichert und aktiviert."
         logger.info("Settings wurden nach Setup neu geladen (Hot-Reload)")
