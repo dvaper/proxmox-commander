@@ -368,40 +368,14 @@
 
                           <v-divider class="my-4"></v-divider>
 
-                          <v-text-field
-                            v-model="config.netbox_token"
-                            label="NetBox API Token"
-                            prepend-inner-icon="mdi-key-variant"
-                            hint="Für interne Kommunikation zwischen Commander und NetBox"
-                            persistent-hint
-                            variant="outlined"
-                            density="compact"
-                            readonly
-                            class="mb-2"
-                          >
-                            <template v-slot:append>
-                              <v-btn
-                                icon
-                                size="small"
-                                variant="text"
-                                @click="generateNetboxToken"
-                                title="Neuen Token generieren"
-                              >
-                                <v-icon>mdi-refresh</v-icon>
-                              </v-btn>
-                            </template>
-                          </v-text-field>
-
-                          <v-btn
-                            v-if="!config.netbox_token"
-                            color="primary"
-                            variant="tonal"
-                            size="small"
-                            @click="generateNetboxToken"
-                          >
-                            <v-icon left class="mr-2">mdi-key-plus</v-icon>
-                            Token generieren
-                          </v-btn>
+                          <!-- Token ist fest vorgegeben fuer integriertes NetBox -->
+                          <v-alert type="success" variant="tonal" density="compact" class="mb-2">
+                            <v-icon start size="small">mdi-check-circle</v-icon>
+                            API-Token ist automatisch konfiguriert
+                          </v-alert>
+                          <div class="text-caption text-grey mb-2">
+                            Token: <code>{{ config.netbox_token.substring(0, 8) }}...{{ config.netbox_token.substring(32) }}</code>
+                          </div>
                         </div>
 
                         <!-- Externes NetBox -->

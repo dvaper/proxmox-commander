@@ -87,9 +87,9 @@ services:
       - SUPERUSER_API_TOKEN=${NETBOX_TOKEN:-0123456789abcdef0123456789abcdef01234567}
       - SKIP_SUPERUSER=false
     volumes:
-      - netbox-media:/opt/netbox/netbox/media
-      - netbox-reports:/opt/netbox/netbox/reports
-      - netbox-scripts:/opt/netbox/netbox/scripts
+      - ./data/netbox/media:/opt/netbox/netbox/media
+      - ./data/netbox/reports:/opt/netbox/netbox/reports
+      - ./data/netbox/scripts:/opt/netbox/netbox/scripts
     networks:
       - proxmox-commander
 
@@ -110,9 +110,9 @@ services:
       - REDIS_HOST=redis
       - SECRET_KEY=${NETBOX_SECRET_KEY:-netbox-default-secret-key-change-me-in-production-min-50-chars}
     volumes:
-      - netbox-media:/opt/netbox/netbox/media
-      - netbox-reports:/opt/netbox/netbox/reports
-      - netbox-scripts:/opt/netbox/netbox/scripts
+      - ./data/netbox/media:/opt/netbox/netbox/media
+      - ./data/netbox/reports:/opt/netbox/netbox/reports
+      - ./data/netbox/scripts:/opt/netbox/netbox/scripts
     networks:
       - proxmox-commander
 
@@ -149,7 +149,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-netbox}
       - POSTGRES_DB=netbox
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U netbox"]
       interval: 10s
@@ -166,7 +166,7 @@ services:
     environment:
       - TZ=${TZ:-Europe/Berlin}
     volumes:
-      - redis-data:/data
+      - ./data/redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -179,9 +179,5 @@ networks:
   proxmox-commander:
     driver: bridge
 
-volumes:
-  postgres-data:
-  redis-data:
-  netbox-media:
-  netbox-reports:
-  netbox-scripts:
+# Alle Daten liegen unter ./data/ (Bind Mounts statt Named Volumes)
+# Bei Loeschen des Installationsverzeichnisses werden alle Daten geloescht

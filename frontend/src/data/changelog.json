@@ -14,6 +14,9 @@
         "Setup: Admin-User wird nach Hot-Reload erstellt (Login nach Wizard)",
         "Setup: Robustere Admin-Erstellung mit expliziten Credentials",
         "NetBox: Default-Token verwenden (403 Forbidden Fix)"
+      ],
+      "Infrastruktur": [
+        "Alle Volumes als Bind Mounts unter ./data/ (kein docker compose down -v mehr noetig)"
       ]
     }
   },
