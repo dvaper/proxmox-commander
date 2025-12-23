@@ -22,30 +22,200 @@
       </v-col>
     </v-row>
 
-    <!-- Tabs -->
+    <!-- Tabs - Workflow-Reihenfolge -->
     <v-card>
       <v-tabs v-model="activeTab" color="primary">
-        <v-tab value="vlans">
-          <v-icon start>mdi-lan</v-icon>
-          VLANs
-        </v-tab>
-        <v-tab value="prefixes">
-          <v-icon start>mdi-ip</v-icon>
-          Prefixes
-        </v-tab>
         <v-tab value="import">
           <v-icon start>mdi-import</v-icon>
-          Import
+          1. VLAN-Import
+        </v-tab>
+        <v-tab value="networks">
+          <v-icon start>mdi-lan</v-icon>
+          2. Netzwerke
+        </v-tab>
+        <v-tab value="ips">
+          <v-icon start>mdi-ip-network</v-icon>
+          3. IP-Adressen
         </v-tab>
       </v-tabs>
 
       <v-divider></v-divider>
 
       <v-window v-model="activeTab">
-        <!-- Tab: VLANs -->
-        <v-window-item value="vlans">
+        <!-- Tab 1: VLAN-Import -->
+        <v-window-item value="import">
           <v-card-text>
+            <v-alert type="info" variant="tonal" class="mb-4">
+              <div class="d-flex align-center">
+                <v-icon start>mdi-information</v-icon>
+                <div>
+                  <strong>Schritt 1:</strong> Scanne den Proxmox-Cluster nach VLANs und importiere sie nach NetBox.
+                  Die VLANs werden automatisch mit den zugehoerigen Prefixes angelegt.
+                </div>
+              </div>
+            </v-alert>
+
+            <v-btn
+              color="primary"
+              @click="scanProxmox"
+              :loading="scanning"
+              class="mb-4"
+            >
+              <v-icon start>mdi-magnify-scan</v-icon>
+              Proxmox scannen
+            </v-btn>
+
+            <!-- Scan-Ergebnisse -->
+            <template v-if="proxmoxVlans.length > 0">
+              <v-data-table
+                v-model="selectedVlans"
+                :headers="importHeaders"
+                :items="proxmoxVlans"
+                show-select
+                density="compact"
+                :items-per-page="15"
+                item-value="vlan_id"
+              >
+                <template v-slot:top>
+                  <v-toolbar flat density="compact">
+                    <v-toolbar-title class="text-body-1">
+                      {{ proxmoxVlans.length }} VLANs in Proxmox gefunden
+                    </v-toolbar-title>
+                  </v-toolbar>
+                </template>
+
+                <template v-slot:item.vlan_id="{ item }">
+                  <v-chip size="small" color="primary" variant="flat">
+                    {{ item.vlan_id }}
+                  </v-chip>
+                </template>
+
+                <template v-slot:item.bridge="{ item }">
+                  <code>{{ item.bridge }}</code>
+                </template>
+
+                <template v-slot:item.nodes="{ item }">
+                  <v-chip
+                    v-for="node in item.nodes"
+                    :key="node"
+                    size="x-small"
+                    class="mr-1"
+                    variant="outlined"
+                  >
+                    {{ node }}
+                  </v-chip>
+                </template>
+
+                <template v-slot:item.exists_in_netbox="{ item }">
+                  <v-chip v-if="item.exists_in_netbox" size="small" color="success" variant="flat">
+                    <v-icon start size="small">mdi-check</v-icon>
+                    Vorhanden
+                  </v-chip>
+                  <v-chip v-else size="small" color="warning" variant="flat">
+                    <v-icon start size="small">mdi-alert</v-icon>
+                    Neu
+                  </v-chip>
+                </template>
+
+                <template v-slot:item.prefix="{ item }">
+                  <v-text-field
+                    v-model="item.prefix"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    :placeholder="`192.168.${item.vlan_id}.0/24`"
+                    style="min-width: 180px"
+                    :disabled="item.exists_in_netbox"
+                  ></v-text-field>
+                </template>
+              </v-data-table>
+
+              <!-- Import Button -->
+              <v-btn
+                color="success"
+                @click="importVlans"
+                :loading="importing"
+                :disabled="selectedVlans.length === 0"
+                class="mt-4"
+              >
+                <v-icon start>mdi-import</v-icon>
+                {{ selectedVlans.length }} VLANs importieren
+              </v-btn>
+            </template>
+
+            <!-- Empty State -->
+            <v-alert
+              v-else-if="!scanning && scannedOnce"
+              type="success"
+              variant="tonal"
+              class="mt-4"
+            >
+              <v-icon start>mdi-check-circle</v-icon>
+              Keine neuen VLANs gefunden. Alle VLANs sind bereits in NetBox vorhanden.
+            </v-alert>
+
+            <!-- Import-Ergebnis -->
+            <v-alert
+              v-if="importResult"
+              :type="importResult.errors?.length > 0 ? 'warning' : 'success'"
+              variant="tonal"
+              class="mt-4"
+              closable
+              @click:close="importResult = null"
+            >
+              <div v-if="importResult.imported?.length > 0">
+                <strong>Importiert:</strong> VLANs {{ importResult.imported.join(', ') }}
+              </div>
+              <div v-if="importResult.skipped?.length > 0">
+                <strong>Uebersprungen:</strong> VLANs {{ importResult.skipped.join(', ') }} (bereits vorhanden)
+              </div>
+              <div v-if="importResult.errors?.length > 0">
+                <strong>Fehler:</strong>
+                <ul>
+                  <li v-for="(error, i) in importResult.errors" :key="i">{{ error }}</li>
+                </ul>
+              </div>
+              <div class="mt-2">
+                <v-btn size="small" variant="outlined" @click="activeTab = 'networks'">
+                  <v-icon start>mdi-arrow-right</v-icon>
+                  Weiter zu Netzwerke
+                </v-btn>
+              </div>
+            </v-alert>
+          </v-card-text>
+        </v-window-item>
+
+        <!-- Tab 2: Netzwerke (VLANs + Prefixes) -->
+        <v-window-item value="networks">
+          <v-card-text>
+            <v-alert type="info" variant="tonal" class="mb-4" density="compact">
+              <v-icon start size="small">mdi-information</v-icon>
+              Uebersicht aller VLANs und Prefixes aus NetBox.
+            </v-alert>
+
+            <!-- Empty State wenn keine VLANs -->
+            <v-alert
+              v-if="vlans.length === 0 && !loadingVlans"
+              type="warning"
+              variant="tonal"
+              class="mb-4"
+            >
+              <div class="d-flex align-center justify-space-between">
+                <div>
+                  <v-icon start>mdi-alert</v-icon>
+                  <strong>Noch keine VLANs vorhanden.</strong>
+                  Importiere zuerst VLANs aus Proxmox.
+                </div>
+                <v-btn size="small" variant="outlined" @click="activeTab = 'import'">
+                  <v-icon start>mdi-import</v-icon>
+                  Zum VLAN-Import
+                </v-btn>
+              </div>
+            </v-alert>
+
+            <!-- VLANs Tabelle -->
             <v-data-table
+              v-if="vlans.length > 0 || loadingVlans"
               :headers="vlanHeaders"
               :items="vlans"
               :loading="loadingVlans"
@@ -54,7 +224,7 @@
             >
               <template v-slot:top>
                 <v-toolbar flat density="compact">
-                  <v-toolbar-title class="text-body-1">VLANs aus NetBox</v-toolbar-title>
+                  <v-toolbar-title class="text-body-1">VLANs</v-toolbar-title>
                   <v-spacer></v-spacer>
                   <v-btn icon variant="text" size="small" @click="loadVlans" :loading="loadingVlans">
                     <v-icon size="small">mdi-refresh</v-icon>
@@ -76,13 +246,89 @@
                 <code>{{ item.prefix || '-' }}</code>
               </template>
             </v-data-table>
+
+            <v-divider class="my-6"></v-divider>
+
+            <!-- Prefixes Tabelle -->
+            <v-data-table
+              :headers="prefixHeaders"
+              :items="prefixes"
+              :loading="loadingPrefixes"
+              density="compact"
+              :items-per-page="15"
+            >
+              <template v-slot:top>
+                <v-toolbar flat density="compact">
+                  <v-toolbar-title class="text-body-1">Prefixes</v-toolbar-title>
+                  <v-spacer></v-spacer>
+                  <v-btn icon variant="text" size="small" @click="loadPrefixes" :loading="loadingPrefixes">
+                    <v-icon size="small">mdi-refresh</v-icon>
+                  </v-btn>
+                </v-toolbar>
+              </template>
+
+              <template v-slot:item.prefix="{ item }">
+                <code>{{ item.prefix }}</code>
+              </template>
+
+              <template v-slot:item.vlan="{ item }">
+                <v-chip v-if="item.vlan" size="small" color="primary" variant="outlined">
+                  VLAN {{ item.vlan }}
+                </v-chip>
+                <span v-else class="text-grey">-</span>
+              </template>
+
+              <template v-slot:item.utilization="{ item }">
+                <div class="d-flex align-center" style="min-width: 120px">
+                  <v-progress-linear
+                    :model-value="item.utilization || 0"
+                    height="8"
+                    rounded
+                    :color="item.utilization > 80 ? 'error' : item.utilization > 50 ? 'warning' : 'success'"
+                    class="mr-2"
+                  >
+                  </v-progress-linear>
+                  <span class="text-caption">{{ item.utilization || 0 }}%</span>
+                </div>
+              </template>
+            </v-data-table>
+
+            <!-- Hinweis zur IP-Synchronisation -->
+            <v-alert
+              v-if="prefixes.length > 0"
+              type="info"
+              variant="tonal"
+              class="mt-4"
+              density="compact"
+            >
+              <div class="d-flex align-center justify-space-between">
+                <div>
+                  <v-icon start size="small">mdi-lightbulb</v-icon>
+                  Um die Auslastung zu aktualisieren, synchronisiere die IP-Adressen aus Proxmox.
+                </div>
+                <v-btn size="small" variant="outlined" @click="activeTab = 'ips'">
+                  <v-icon start>mdi-sync</v-icon>
+                  IPs synchronisieren
+                </v-btn>
+              </div>
+            </v-alert>
           </v-card-text>
         </v-window-item>
 
-        <!-- Tab: Prefixes -->
-        <v-window-item value="prefixes">
+        <!-- Tab 3: IP-Adressen -->
+        <v-window-item value="ips">
           <v-card-text>
-            <!-- Sync Button und Info -->
+            <v-alert type="info" variant="tonal" class="mb-4">
+              <div class="d-flex align-center">
+                <v-icon start>mdi-information</v-icon>
+                <div>
+                  <strong>Schritt 3:</strong> Synchronisiere IP-Adressen aus laufenden Proxmox VMs nach NetBox.
+                  Dies aktualisiert die Auslastung der Prefixes.
+                </div>
+              </div>
+            </v-alert>
+
+            <!-- Sync Button -->
             <div class="d-flex align-center mb-4">
               <v-btn
                 color="primary"
@@ -90,7 +336,7 @@
                 :loading="syncing"
               >
                 <v-icon start>mdi-sync</v-icon>
-                Mit Proxmox abgleichen
+                IPs synchronisieren
               </v-btn>
               <span v-if="lastSyncTime" class="ml-4 text-caption text-grey">
                 Letzter Sync: {{ lastSyncTime }}
@@ -157,8 +403,9 @@
               </v-expansion-panel>
             </v-expansion-panels>
 
+            <!-- Prefix-Auslastung -->
             <v-data-table
-              :headers="prefixHeaders"
+              :headers="prefixUtilizationHeaders"
               :items="prefixes"
               :loading="loadingPrefixes"
               density="compact"
@@ -166,7 +413,7 @@
             >
               <template v-slot:top>
                 <v-toolbar flat density="compact">
-                  <v-toolbar-title class="text-body-1">IP-Prefixes aus NetBox</v-toolbar-title>
+                  <v-toolbar-title class="text-body-1">Prefix-Auslastung</v-toolbar-title>
                   <v-spacer></v-spacer>
                   <v-btn icon variant="text" size="small" @click="loadPrefixes" :loading="loadingPrefixes">
                     <v-icon size="small">mdi-refresh</v-icon>
@@ -186,123 +433,21 @@
               </template>
 
               <template v-slot:item.utilization="{ item }">
-                <v-progress-linear
-                  :model-value="item.utilization || 0"
-                  height="8"
-                  rounded
-                  :color="item.utilization > 80 ? 'error' : item.utilization > 50 ? 'warning' : 'success'"
-                >
-                </v-progress-linear>
-                <span class="text-caption">{{ item.utilization || 0 }}%</span>
+                <div class="d-flex align-center" style="min-width: 150px">
+                  <v-progress-linear
+                    :model-value="item.utilization || 0"
+                    height="12"
+                    rounded
+                    :color="item.utilization > 80 ? 'error' : item.utilization > 50 ? 'warning' : 'success'"
+                    class="mr-2"
+                  >
+                  </v-progress-linear>
+                  <span class="text-body-2 font-weight-medium" style="min-width: 40px">
+                    {{ item.utilization || 0 }}%
+                  </span>
+                </div>
               </template>
             </v-data-table>
-          </v-card-text>
-        </v-window-item>
-
-        <!-- Tab: Import -->
-        <v-window-item value="import">
-          <v-card-text>
-            <v-alert type="info" variant="tonal" class="mb-4">
-              <v-icon start>mdi-information</v-icon>
-              Scanne Proxmox-Cluster nach VLANs und importiere sie nach NetBox.
-            </v-alert>
-
-            <v-btn
-              color="primary"
-              @click="scanProxmox"
-              :loading="scanning"
-              class="mb-4"
-            >
-              <v-icon start>mdi-magnify-scan</v-icon>
-              Proxmox scannen
-            </v-btn>
-
-            <!-- Scan-Ergebnisse -->
-            <v-data-table
-              v-if="proxmoxVlans.length > 0"
-              v-model="selectedVlans"
-              :headers="importHeaders"
-              :items="proxmoxVlans"
-              show-select
-              density="compact"
-              :items-per-page="15"
-              item-value="vlan_id"
-            >
-              <template v-slot:item.vlan_id="{ item }">
-                <v-chip size="small" color="primary" variant="flat">
-                  {{ item.vlan_id }}
-                </v-chip>
-              </template>
-
-              <template v-slot:item.bridge="{ item }">
-                <code>{{ item.bridge }}</code>
-              </template>
-
-              <template v-slot:item.nodes="{ item }">
-                <v-chip
-                  v-for="node in item.nodes"
-                  :key="node"
-                  size="x-small"
-                  class="mr-1"
-                  variant="outlined"
-                >
-                  {{ node }}
-                </v-chip>
-              </template>
-
-              <template v-slot:item.exists_in_netbox="{ item }">
-                <v-icon v-if="item.exists_in_netbox" color="success">mdi-check-circle</v-icon>
-                <v-icon v-else color="warning">mdi-alert-circle-outline</v-icon>
-              </template>
-
-              <template v-slot:item.prefix="{ item }">
-                <v-text-field
-                  v-model="item.prefix"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                  :placeholder="`192.168.${item.vlan_id}.0/24`"
-                  style="min-width: 180px"
-                  :disabled="item.exists_in_netbox"
-                ></v-text-field>
-              </template>
-            </v-data-table>
-
-            <!-- Import Button -->
-            <v-btn
-              v-if="proxmoxVlans.length > 0"
-              color="success"
-              @click="importVlans"
-              :loading="importing"
-              :disabled="selectedVlans.length === 0"
-              class="mt-4"
-            >
-              <v-icon start>mdi-import</v-icon>
-              {{ selectedVlans.length }} VLANs importieren
-            </v-btn>
-
-            <!-- Import-Ergebnis -->
-            <v-alert
-              v-if="importResult"
-              :type="importResult.errors?.length > 0 ? 'warning' : 'success'"
-              variant="tonal"
-              class="mt-4"
-              closable
-              @click:close="importResult = null"
-            >
-              <div v-if="importResult.imported?.length > 0">
-                <strong>Importiert:</strong> VLANs {{ importResult.imported.join(', ') }}
-              </div>
-              <div v-if="importResult.skipped?.length > 0">
-                <strong>Uebersprungen:</strong> VLANs {{ importResult.skipped.join(', ') }} (bereits vorhanden)
-              </div>
-              <div v-if="importResult.errors?.length > 0">
-                <strong>Fehler:</strong>
-                <ul>
-                  <li v-for="(error, i) in importResult.errors" :key="i">{{ error }}</li>
-                </ul>
-              </div>
-            </v-alert>
           </v-card-text>
         </v-window-item>
       </v-window>
@@ -320,10 +465,13 @@ const netboxUrl = computed(() => {
   return `http://${host}:8081`
 })
 
-// Aktiver Tab
-const activeTab = ref('vlans')
+// Aktiver Tab - Default ist Import fuer neue User
+const activeTab = ref('import')
 
-// VLANs Tab
+// Scan-Status
+const scannedOnce = ref(false)
+
+// VLANs
 const vlans = ref([])
 const loadingVlans = ref(false)
 const vlanHeaders = [
@@ -333,14 +481,20 @@ const vlanHeaders = [
   { title: 'Bridge', key: 'bridge', width: '120px' },
 ]
 
-// Prefixes Tab
+// Prefixes
 const prefixes = ref([])
 const loadingPrefixes = ref(false)
 const prefixHeaders = [
   { title: 'Prefix', key: 'prefix' },
   { title: 'VLAN', key: 'vlan', width: '120px' },
   { title: 'Beschreibung', key: 'description' },
-  { title: 'Auslastung', key: 'utilization', width: '150px' },
+  { title: 'Auslastung', key: 'utilization', width: '180px' },
+]
+const prefixUtilizationHeaders = [
+  { title: 'Prefix', key: 'prefix' },
+  { title: 'VLAN', key: 'vlan', width: '120px' },
+  { title: 'Beschreibung', key: 'description' },
+  { title: 'Auslastung', key: 'utilization', width: '200px' },
 ]
 
 // IP Sync
@@ -356,7 +510,7 @@ const syncIpHeaders = [
   { title: 'In NetBox', key: 'exists_in_netbox', width: '100px' },
 ]
 
-// Import Tab
+// Import
 const proxmoxVlans = ref([])
 const selectedVlans = ref([])
 const scanning = ref(false)
@@ -366,7 +520,7 @@ const importHeaders = [
   { title: 'VLAN ID', key: 'vlan_id', width: '100px' },
   { title: 'Bridge', key: 'bridge', width: '120px' },
   { title: 'Nodes', key: 'nodes' },
-  { title: 'In NetBox', key: 'exists_in_netbox', width: '100px' },
+  { title: 'Status', key: 'exists_in_netbox', width: '120px' },
   { title: 'Prefix (editierbar)', key: 'prefix', width: '200px' },
 ]
 
@@ -425,6 +579,7 @@ async function syncIPs() {
 async function scanProxmox() {
   scanning.value = true
   importResult.value = null
+  scannedOnce.value = true
   try {
     const response = await api.get('/api/netbox/proxmox-vlans')
     proxmoxVlans.value = response.data.map(v => ({
@@ -477,8 +632,13 @@ async function importVlans() {
 }
 
 // Beim Laden der Komponente
-onMounted(() => {
-  loadVlans()
-  loadPrefixes()
+onMounted(async () => {
+  await loadVlans()
+  await loadPrefixes()
+
+  // Wenn bereits VLANs vorhanden, zeige Netzwerke-Tab
+  if (vlans.value.length > 0) {
+    activeTab.value = 'networks'
+  }
 })
 </script>

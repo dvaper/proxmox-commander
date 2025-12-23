@@ -1,5 +1,17 @@
 [
   {
+    "version": "v0.2.15",
+    "date": "2025-12-24",
+    "changes": {
+      "Features": [
+        "NetBox: Komplett ueberarbeitete UI mit Workflow-Tabs (1. VLAN-Import, 2. Netzwerke, 3. IP-Adressen)",
+        "NetBox: Intuitive Schritt-fuer-Schritt Benutzerfuehrung durch den Import-Prozess",
+        "NetBox: 'Mit Proxmox abgleichen' umbenannt zu 'IPs synchronisieren' fuer Klarheit",
+        "NetBox: Empty-States mit hilfreichen Hinweisen und Navigation zwischen Tabs"
+      ]
+    }
+  },
+  {
     "version": "v0.2.14",
     "date": "2025-12-23",
     "changes": {
