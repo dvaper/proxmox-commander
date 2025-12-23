@@ -489,7 +489,11 @@ const availableIPs = ref([])
 const selectedIP = ref(null)
 const ipMode = ref('auto')
 const ipamError = ref(false)
-const netboxUrl = ref(null)
+// NetBox URL: gleicher Host wie App, Port 8081
+const netboxUrl = computed(() => {
+  const host = window.location.hostname
+  return `http://${host}:8081`
+})
 const validation = ref(null)
 const preview = ref(null)
 const loadingTemplates = ref(false)
@@ -777,13 +781,6 @@ async function loadAvailableIPs() {
     const errorMsg = e.response?.data?.detail || ''
     if (errorMsg.includes('Prefix') && errorMsg.includes('nicht')) {
       ipamError.value = true
-      // NetBox URL laden für den Link
-      try {
-        const statusResponse = await api.get('/api/terraform/ipam/status')
-        netboxUrl.value = statusResponse.data.netbox_url
-      } catch {
-        // Ignorieren wenn Status nicht geladen werden kann
-      }
     }
   } finally {
     loadingIPs.value = false
