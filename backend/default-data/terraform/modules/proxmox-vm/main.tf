@@ -37,26 +37,15 @@ resource "proxmox_vm_qemu" "vm" {
   # SCSI Controller
   scsihw = "virtio-scsi-single"
 
-  # Disk
-  disks {
-    scsi {
-      scsi0 {
-        disk {
-          size     = var.disk_size
-          storage  = var.disk_storage
-          cache    = "writeback"
-          discard  = true
-          iothread = true
-        }
-      }
-    }
-    ide {
-      ide2 {
-        cloudinit {
-          storage = var.disk_storage
-        }
-      }
-    }
+  # Disk (2.9.x Syntax)
+  disk {
+    type     = "scsi"
+    storage  = var.disk_storage
+    size     = "${var.disk_size}G"
+    cache    = "writeback"
+    discard  = "on"
+    iothread = 1
+    slot     = 0
   }
 
   # Netzwerk
