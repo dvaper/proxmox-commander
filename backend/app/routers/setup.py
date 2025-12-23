@@ -566,20 +566,29 @@ async def save_setup(config: SetupConfig, force: bool = False):
         raise HTTPException(status_code=500, detail=result.error)
 
     # Settings neu laden (Hot-Reload via SettingsProxy)
-    # Da PROXMOX_* nicht mehr in docker-compose.yml stehen, werden sie
-    # direkt aus der .env Datei gelesen und koennen hot-reloaded werden.
     from app.config import reload_settings
-    from app.database import create_default_admin
+    from app.database import ensure_admin_exists
     try:
         reload_settings(str(get_env_file_path()))
-
-        # Admin-User erstellen/aktualisieren mit den neuen Credentials
-        await create_default_admin()
-        logger.info("Admin-User nach Setup erstellt/aktualisiert")
-
-        result.restart_required = False
-        result.message = "Konfiguration erfolgreich gespeichert und aktiviert."
         logger.info("Settings wurden nach Setup neu geladen (Hot-Reload)")
+
+        # Admin-User erstellen/aktualisieren mit EXPLIZITEN Credentials aus dem Wizard
+        # (nicht aus Settings, um Race-Conditions zu vermeiden)
+        admin_result = await ensure_admin_exists(
+            username=config.app_admin_user,
+            password=config.app_admin_password,
+            email=config.app_admin_email,
+        )
+
+        if admin_result["success"]:
+            logger.info(f"Admin-User: {admin_result['action']} - {admin_result['message']}")
+            result.restart_required = False
+            result.message = "Konfiguration erfolgreich gespeichert und aktiviert."
+        else:
+            logger.error(f"Admin-User Fehler: {admin_result.get('message')}")
+            result.restart_required = True
+            result.message = "Konfiguration gespeichert, aber Admin-Erstellung fehlgeschlagen. Bitte Container neu starten."
+
     except Exception as e:
         logger.warning(f"Hot-Reload fehlgeschlagen: {e} - Container-Restart erforderlich")
         # Fallback: restart_required bleibt True

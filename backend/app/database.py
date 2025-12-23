@@ -75,36 +75,66 @@ async def run_migrations():
 
 
 async def create_default_admin():
-    """Erstellt oder aktualisiert den Admin-User basierend auf Settings"""
-    # Import hier um zirkulaere Imports zu vermeiden
+    """Erstellt oder aktualisiert den Admin-User basierend auf Settings (fuer App-Start)"""
+    # Verwendet Settings - fuer normalen App-Start
+    await ensure_admin_exists(
+        username=settings.app_admin_user,
+        password=settings.app_admin_password,
+        email=settings.app_admin_email,
+    )
+
+
+async def ensure_admin_exists(
+    username: str = None,
+    password: str = None,
+    email: str = None,
+) -> dict:
+    """
+    Stellt sicher, dass ein Admin-User mit den angegebenen Credentials existiert.
+
+    Diese Funktion ist robuster als create_default_admin() weil sie:
+    - Explizite Credentials als Parameter akzeptiert (nicht nur aus Settings)
+    - Immer einen Admin erstellt/aktualisiert wenn Credentials angegeben sind
+    - Detailliertes Ergebnis zurueckgibt
+
+    Args:
+        username: Admin-Benutzername (default: "admin")
+        password: Admin-Passwort (wenn None, wird keiner erstellt/aktualisiert)
+        email: Admin-E-Mail (default: "admin@local")
+
+    Returns:
+        dict mit: success, action ("created"/"updated"/"skipped"), message
+    """
     from app.models.user import User
     from app.auth.security import get_password_hash, verify_password
 
+    # Defaults
+    admin_user = username or "admin"
+    admin_email = email or "admin@local"
+
+    # Ohne Passwort koennen wir nichts tun
+    if not password:
+        logger.debug("Kein Admin-Passwort angegeben, ueberspringe Admin-Erstellung")
+        return {
+            "success": True,
+            "action": "skipped",
+            "message": "Kein Passwort angegeben"
+        }
+
     async with async_session() as session:
-        # Prüfe ob bereits User existieren
-        result = await session.execute(select(func.count(User.id)))
-        user_count = result.scalar()
+        # Prüfe ob Super-Admin existiert
+        result = await session.execute(
+            select(User).where(User.is_super_admin == True)
+        )
+        super_admin = result.scalar_one_or_none()
 
-        # Admin-Credentials aus Settings
-        admin_user = settings.app_admin_user or "admin"
-        admin_email = settings.app_admin_email or "admin@local"
-
-        if user_count == 0:
-            # Keine User vorhanden - neuen Admin erstellen
-            if settings.app_admin_password:
-                admin_password = settings.app_admin_password
-                logger.info(f"Erstelle Admin-User '{admin_user}' mit konfiguriertem Passwort")
-            else:
-                # Fallback: Generiertes Passwort
-                import secrets
-                admin_password = secrets.token_urlsafe(12)
-                logger.warning(f"Kein Admin-Passwort konfiguriert - generiere zufaelliges Passwort")
-                logger.warning(f"ACHTUNG: Generiertes Admin-Passwort: {admin_password}")
-                logger.warning("Bitte dieses Passwort notieren oder im Setup-Wizard ein eigenes setzen!")
+        if super_admin is None:
+            # Kein Super-Admin vorhanden - neuen erstellen
+            logger.info(f"Erstelle neuen Admin-User '{admin_user}'")
 
             admin = User(
                 username=admin_user,
-                password_hash=get_password_hash(admin_password),
+                password_hash=get_password_hash(password),
                 email=admin_email,
                 is_admin=True,
                 is_super_admin=True,
@@ -112,44 +142,52 @@ async def create_default_admin():
             )
             session.add(admin)
             await session.commit()
+
             logger.info(f"Admin-User '{admin_user}' erfolgreich erstellt")
+            return {
+                "success": True,
+                "action": "created",
+                "message": f"Admin-User '{admin_user}' erstellt"
+            }
 
-        elif settings.app_admin_password:
-            # User existieren und Passwort ist in Settings gesetzt
-            # Prüfe ob Admin-User aktualisiert werden muss
-            result = await session.execute(
-                select(User).where(User.is_super_admin == True)
-            )
-            super_admin = result.scalar_one_or_none()
-
-            if super_admin:
-                needs_update = False
-                update_reasons = []
-
-                # Prüfe ob Username geändert wurde
-                if super_admin.username != admin_user:
-                    super_admin.username = admin_user
-                    needs_update = True
-                    update_reasons.append("username")
-
-                # Prüfe ob Email geändert wurde
-                if super_admin.email != admin_email:
-                    super_admin.email = admin_email
-                    needs_update = True
-                    update_reasons.append("email")
-
-                # Prüfe ob Passwort geändert wurde
-                if not verify_password(settings.app_admin_password, super_admin.password_hash):
-                    super_admin.password_hash = get_password_hash(settings.app_admin_password)
-                    needs_update = True
-                    update_reasons.append("password")
-
-                if needs_update:
-                    await session.commit()
-                    logger.info(f"Admin-User aktualisiert ({', '.join(update_reasons)})")
-                else:
-                    logger.debug("Admin-Credentials unveraendert")
-            else:
-                logger.warning("Kein Super-Admin gefunden, kann Credentials nicht aktualisieren")
         else:
-            logger.debug(f"User existieren bereits ({user_count}), keine Admin-Credentials in Settings")
+            # Super-Admin existiert - aktualisieren falls noetig
+            needs_update = False
+            update_reasons = []
+
+            # Username pruefen/aktualisieren
+            if super_admin.username != admin_user:
+                logger.info(f"Aktualisiere Admin-Username: {super_admin.username} -> {admin_user}")
+                super_admin.username = admin_user
+                needs_update = True
+                update_reasons.append("username")
+
+            # Email pruefen/aktualisieren
+            if super_admin.email != admin_email:
+                super_admin.email = admin_email
+                needs_update = True
+                update_reasons.append("email")
+
+            # Passwort pruefen/aktualisieren
+            if not verify_password(password, super_admin.password_hash):
+                super_admin.password_hash = get_password_hash(password)
+                needs_update = True
+                update_reasons.append("password")
+
+            if needs_update:
+                await session.commit()
+                msg = f"Admin-User aktualisiert ({', '.join(update_reasons)})"
+                logger.info(msg)
+                return {
+                    "success": True,
+                    "action": "updated",
+                    "message": msg,
+                    "updated_fields": update_reasons
+                }
+            else:
+                logger.debug("Admin-Credentials unveraendert")
+                return {
+                    "success": True,
+                    "action": "unchanged",
+                    "message": "Admin-Credentials unveraendert"
+                }
