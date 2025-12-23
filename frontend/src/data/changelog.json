@@ -1,5 +1,17 @@
 [
   {
+    "version": "v0.2.16",
+    "date": "2025-12-24",
+    "changes": {
+      "Bugfixes": [
+        "NetBox: VLAN-Import Button nur sichtbar wenn neue VLANs vorhanden",
+        "NetBox: Prefix-Feld nur bei neuen VLANs editierbar",
+        "NetBox: Netzwerke Empty-State nur wenn VLANs UND Prefixes leer",
+        "NetBox: Checkbox bei bereits existierenden VLANs deaktiviert"
+      ]
+    }
+  },
+  {
     "version": "v0.2.15",
     "date": "2025-12-24",
     "changes": {
