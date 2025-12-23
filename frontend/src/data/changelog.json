@@ -1,5 +1,18 @@
 [
   {
+    "version": "v0.2.12",
+    "date": "2025-12-23",
+    "changes": {
+      "Bugfixes": [
+        "Terraform Module fehlen - proxmox-vm Modul hinzugefuegt",
+        "terraform.tfvars wird automatisch durch Setup-Wizard generiert"
+      ],
+      "Features": [
+        "Terraform-Dateien werden beim Container-Start automatisch installiert"
+      ]
+    }
+  },
+  {
     "version": "v0.2.11",
     "date": "2025-12-23",
     "changes": {

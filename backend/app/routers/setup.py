@@ -6,6 +6,7 @@ Diese Endpoints sind ohne Authentifizierung zugaenglich.
 """
 import os
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, HTTPException
@@ -313,6 +314,61 @@ async def validate_proxmox_connection(config: ProxmoxConfig) -> ProxmoxValidatio
         )
 
 
+async def generate_terraform_tfvars(config: SetupConfig) -> None:
+    """
+    Generiert die terraform.tfvars Datei aus der Setup-Konfiguration.
+
+    Die tfvars enthaelt die Proxmox-Credentials und Default-Werte.
+    """
+    from pathlib import Path
+
+    terraform_dir = Path(settings.terraform_dir)
+    tfvars_path = terraform_dir / "terraform.tfvars"
+
+    # SSH Public Key lesen (falls vorhanden)
+    ssh_public_key = ""
+    ssh_key_path = Path(settings.ssh_key_path)
+    ssh_pub_path = ssh_key_path.with_suffix(".pub")
+    if ssh_pub_path.exists():
+        try:
+            ssh_public_key = ssh_pub_path.read_text().strip()
+        except Exception:
+            pass
+
+    # Proxmox API URL zusammenbauen
+    host = config.proxmox_host
+    if not host.startswith("http"):
+        api_url = f"https://{host}:8006/api2/json"
+    elif ":8006" not in host and not host.endswith("/api2/json"):
+        api_url = f"{host.rstrip('/')}/api2/json"
+    else:
+        api_url = f"{host.rstrip('/')}/api2/json" if not host.endswith("/api2/json") else host
+
+    # tfvars Inhalt
+    tfvars_content = f'''# Proxmox Commander - Terraform Variablen
+# Automatisch generiert durch Setup-Wizard
+# Erstellt: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+# Proxmox API
+proxmox_api_url      = "{api_url}"
+proxmox_token_id     = "{config.proxmox_token_id}"
+proxmox_token_secret = "{config.proxmox_token_secret}"
+proxmox_tls_insecure = {str(not config.proxmox_verify_ssl).lower()}
+
+# VM-Defaults
+default_template      = 940001
+default_template_node = "gandalf"
+ssh_user              = "{config.default_ssh_user}"
+ssh_public_key        = "{ssh_public_key}"
+default_dns           = ["192.168.2.1", "1.1.1.1"]
+'''
+
+    # Schreiben
+    terraform_dir.mkdir(parents=True, exist_ok=True)
+    tfvars_path.write_text(tfvars_content)
+    logger.info(f"Terraform tfvars generiert: {tfvars_path}")
+
+
 def save_env_config(config: SetupConfig) -> SetupSaveResult:
     """Speichert die Konfiguration in die .env Datei"""
     env_path = get_env_file_path()
@@ -405,6 +461,12 @@ def save_env_config(config: SetupConfig) -> SetupSaveResult:
                     f.write(f"{key}={value}\n")
 
         logger.info(f"Setup-Konfiguration gespeichert in {env_path}")
+
+        # Terraform tfvars generieren
+        try:
+            await generate_terraform_tfvars(config)
+        except Exception as e:
+            logger.warning(f"Terraform tfvars konnte nicht erstellt werden: {e}")
 
         return SetupSaveResult(
             success=True,
