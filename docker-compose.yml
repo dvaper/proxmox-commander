@@ -80,7 +80,7 @@ services:
       - DB_USER=netbox
       - DB_PASSWORD=${POSTGRES_PASSWORD:-netbox}
       - REDIS_HOST=redis
-      - SECRET_KEY=${NETBOX_SECRET_KEY:-netbox-secret-key-change-me}
+      - SECRET_KEY=${NETBOX_SECRET_KEY:-netbox-default-secret-key-change-me-in-production-min-50-chars}
       - SUPERUSER_NAME=${NETBOX_ADMIN_USER:-admin}
       - SUPERUSER_EMAIL=${NETBOX_ADMIN_EMAIL:-admin@example.com}
       - SUPERUSER_PASSWORD=${NETBOX_ADMIN_PASSWORD:-admin}
@@ -108,7 +108,7 @@ services:
       - DB_USER=netbox
       - DB_PASSWORD=${POSTGRES_PASSWORD:-netbox}
       - REDIS_HOST=redis
-      - SECRET_KEY=${NETBOX_SECRET_KEY:-netbox-secret-key-change-me}
+      - SECRET_KEY=${NETBOX_SECRET_KEY:-netbox-default-secret-key-change-me-in-production-min-50-chars}
     volumes:
       - netbox-media:/opt/netbox/netbox/media
       - netbox-reports:/opt/netbox/netbox/reports
@@ -131,7 +131,7 @@ services:
       - DB_USER=netbox
       - DB_PASSWORD=${POSTGRES_PASSWORD:-netbox}
       - REDIS_HOST=redis
-      - SECRET_KEY=${NETBOX_SECRET_KEY:-netbox-secret-key-change-me}
+      - SECRET_KEY=${NETBOX_SECRET_KEY:-netbox-default-secret-key-change-me-in-production-min-50-chars}
     networks:
       - proxmox-commander
 

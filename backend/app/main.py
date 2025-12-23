@@ -77,5 +77,37 @@ async def root():
 
 @app.get("/api/health")
 async def health():
-    """Health Check für Monitoring"""
-    return {"status": "healthy"}
+    """Health Check für Monitoring - inkl. Service-Status"""
+    import httpx
+
+    services = {
+        "api": {"status": "healthy", "message": "API running"},
+        "netbox": {"status": "unknown", "message": "Checking..."},
+    }
+
+    # NetBox Status pruefen
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"{settings.netbox_url}/api/status/")
+            if response.status_code == 200:
+                services["netbox"] = {"status": "healthy", "message": "NetBox ready"}
+            else:
+                services["netbox"] = {"status": "degraded", "message": f"HTTP {response.status_code}"}
+    except httpx.ConnectError:
+        services["netbox"] = {"status": "starting", "message": "NetBox starting..."}
+    except httpx.TimeoutException:
+        services["netbox"] = {"status": "starting", "message": "NetBox starting (timeout)"}
+    except Exception as e:
+        services["netbox"] = {"status": "error", "message": str(e)[:50]}
+
+    # Gesamtstatus ermitteln
+    overall = "healthy"
+    if any(s["status"] == "error" for s in services.values()):
+        overall = "degraded"
+    elif any(s["status"] == "starting" for s in services.values()):
+        overall = "starting"
+
+    return {
+        "status": overall,
+        "services": services,
+    }
