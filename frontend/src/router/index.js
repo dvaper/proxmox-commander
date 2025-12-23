@@ -93,6 +93,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/netbox',
+    name: 'NetBox',
+    component: () => import('@/views/NetBoxView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/users',
     name: 'Users',
     component: () => import('@/views/UsersView.vue'),

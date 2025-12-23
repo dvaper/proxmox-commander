@@ -1,5 +1,17 @@
 [
   {
+    "version": "v0.2.9",
+    "date": "2025-12-23",
+    "changes": {
+      "Features": [
+        "NetBox-Integration in Sidebar mit VLAN-Verwaltung",
+        "Proxmox VLAN-Scan (Bridges und VLAN-Tags)",
+        "VLAN-Import von Proxmox nach NetBox",
+        "Prefix-Auslastungsanzeige fuer IP-Prefixes"
+      ]
+    }
+  },
+  {
     "version": "v0.2.8",
     "date": "2025-12-23",
     "changes": {

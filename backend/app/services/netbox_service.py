@@ -408,6 +408,185 @@ class NetBoxService:
 
         return result
 
+    async def vlan_exists(self, vlan_id: int) -> bool:
+        """
+        Prüft ob ein VLAN mit der angegebenen ID in NetBox existiert.
+
+        Args:
+            vlan_id: VLAN-ID (vid)
+
+        Returns:
+            True wenn VLAN existiert, sonst False
+        """
+        self._check_token()
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/api/ipam/vlans/",
+                params={"vid": vlan_id},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            return data["count"] > 0
+
+    async def create_vlan(self, vlan_id: int, name: str = None) -> Optional[dict]:
+        """
+        Erstellt ein VLAN in NetBox.
+
+        Args:
+            vlan_id: VLAN-ID (vid)
+            name: Name des VLANs (default: VLAN{vlan_id})
+
+        Returns:
+            VLAN-Objekt bei Erfolg, None bei Fehler
+        """
+        self._check_token()
+
+        if name is None:
+            name = f"VLAN{vlan_id}"
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/api/ipam/vlans/",
+                json={
+                    "vid": vlan_id,
+                    "name": name,
+                    "status": "active",
+                    "description": "Importiert aus Proxmox",
+                },
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def get_vlan_netbox_id(self, vlan_id: int) -> Optional[int]:
+        """
+        Holt die NetBox-interne ID eines VLANs.
+
+        Args:
+            vlan_id: VLAN-ID (vid)
+
+        Returns:
+            NetBox ID des VLANs oder None
+        """
+        self._check_token()
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/api/ipam/vlans/",
+                params={"vid": vlan_id},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if data["count"] > 0:
+                return data["results"][0]["id"]
+            return None
+
+    async def create_prefix_for_vlan(
+        self, vlan_id: int, prefix: str = None
+    ) -> Optional[dict]:
+        """
+        Erstellt einen Prefix für ein VLAN in NetBox.
+
+        Args:
+            vlan_id: VLAN-ID (vid)
+            prefix: IP-Prefix (default: 192.168.{vlan_id}.0/24)
+
+        Returns:
+            Prefix-Objekt bei Erfolg, None bei Fehler
+        """
+        self._check_token()
+
+        if prefix is None:
+            prefix = f"192.168.{vlan_id}.0/24"
+
+        # NetBox-interne VLAN-ID ermitteln
+        vlan_netbox_id = await self.get_vlan_netbox_id(vlan_id)
+        if not vlan_netbox_id:
+            raise ValueError(f"VLAN {vlan_id} nicht in NetBox gefunden")
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/api/ipam/prefixes/",
+                json={
+                    "prefix": prefix,
+                    "vlan": vlan_netbox_id,
+                    "status": "active",
+                    "is_pool": True,
+                    "description": "Automatisch erstellt",
+                },
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def get_prefixes_with_utilization(self) -> list[dict]:
+        """
+        Holt alle Prefixes aus NetBox mit Auslastungsdaten.
+
+        Returns:
+            Liste von Prefix-Objekten mit utilization
+        """
+        self._check_token()
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/api/ipam/prefixes/",
+                params={"limit": 100},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            result = []
+            for prefix_info in data["results"]:
+                vlan_info = prefix_info.get("vlan")
+                vlan_id = vlan_info.get("vid") if vlan_info else None
+
+                # Utilization berechnen (falls children existiert)
+                utilization = 0
+                children = prefix_info.get("children", 0)
+                family = prefix_info.get("family", {}).get("value", 4)
+
+                # Vereinfachte Berechnung basierend auf Prefix-Größe
+                prefix_str = prefix_info.get("prefix", "")
+                if "/" in prefix_str:
+                    cidr = int(prefix_str.split("/")[1])
+                    if family == 4:
+                        total_ips = 2 ** (32 - cidr) - 2  # Netz + Broadcast abziehen
+                        if total_ips > 0:
+                            # Holen wir die Anzahl der verwendeten IPs
+                            try:
+                                ip_response = await client.get(
+                                    f"{self.base_url}/api/ipam/ip-addresses/",
+                                    params={"parent": prefix_str},
+                                    headers=self.headers,
+                                    timeout=10.0,
+                                )
+                                ip_response.raise_for_status()
+                                used_ips = ip_response.json()["count"]
+                                utilization = int((used_ips / total_ips) * 100)
+                            except Exception:
+                                utilization = 0
+
+                result.append({
+                    "prefix": prefix_str,
+                    "vlan": vlan_id,
+                    "description": prefix_info.get("description", ""),
+                    "utilization": utilization,
+                })
+
+            return sorted(result, key=lambda x: x["prefix"])
+
 
 # Singleton-Instanz
 netbox_service = NetBoxService()

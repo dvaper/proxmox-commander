@@ -38,6 +38,15 @@
           subtitle="VMs erstellen & verwalten"
         ></v-list-item>
 
+        <!-- Netzwerk -->
+        <v-list-subheader class="mt-2">NETZWERK</v-list-subheader>
+        <v-list-item
+          to="/netbox"
+          prepend-icon="mdi-ip-network"
+          title="NetBox"
+          subtitle="IPAM & DCIM"
+        ></v-list-item>
+
         <!-- Ansible -->
         <v-list-subheader class="mt-2">ANSIBLE</v-list-subheader>
         <v-list-item
@@ -282,6 +291,7 @@ onUnmounted(() => {
 const pageTitles = {
   '/': 'Dashboard',
   '/terraform': 'Terraform',
+  '/netbox': 'NetBox',
   '/playbooks': 'Playbooks',
   '/inventory': 'Inventory',
   '/executions': 'Ausführungen',

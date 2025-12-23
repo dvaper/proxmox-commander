@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import init_db
-from app.routers import auth_router, inventory_router, playbooks_router, executions_router, users_router, settings_router, terraform_router, vm_templates_router, cloud_init_router, setup_router
+from app.routers import auth_router, inventory_router, playbooks_router, executions_router, users_router, settings_router, terraform_router, vm_templates_router, cloud_init_router, setup_router, netbox_router
 from app.routers.websocket import router as websocket_router
 from app.services.inventory_sync_service import get_sync_service
 
@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     description="Standalone VM-Management fuer Proxmox mit integriertem NetBox, Ansible und Terraform",
-    version="0.2.8",
+    version="0.2.9",
     lifespan=lifespan,
 )
 
@@ -62,6 +62,7 @@ app.include_router(terraform_router)
 app.include_router(vm_templates_router)
 app.include_router(cloud_init_router)
 app.include_router(setup_router)
+app.include_router(netbox_router)
 app.include_router(websocket_router)
 
 
@@ -70,7 +71,7 @@ async def root():
     """Health Check"""
     return {
         "app": settings.app_name,
-        "version": "0.2.8",
+        "version": "0.2.9",
         "status": "running",
     }
 

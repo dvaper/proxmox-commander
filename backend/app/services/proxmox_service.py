@@ -1053,6 +1053,135 @@ class ProxmoxService:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    # ========== Network/VLAN Scan ==========
+
+    async def scan_network_vlans(self) -> list[dict]:
+        """
+        Scannt alle Proxmox-Nodes nach VLAN-Konfigurationen.
+
+        Findet VLANs durch:
+        1. Bridge-Namen (vmbr60 -> VLAN 60)
+        2. VLAN-Tags in VM-Konfigurationen (net0: ...,tag=100)
+
+        Returns:
+            Liste von dicts mit:
+            - vlan_id: int
+            - bridge: str
+            - nodes: list[str]
+            - vm_count: int
+        """
+        import re
+
+        if not self.is_configured():
+            return []
+
+        vlans = {}  # vlan_id -> {bridge, nodes, vm_count}
+
+        try:
+            headers = self._get_headers()
+
+            async with httpx.AsyncClient(verify=self.verify_ssl) as client:
+                # 1. Alle Nodes durchgehen und Bridges scannen
+                for node in self.CLUSTER_NODES:
+                    try:
+                        response = await client.get(
+                            f"{self.base_url}/nodes/{node}/network",
+                            headers=headers,
+                            timeout=10.0,
+                        )
+
+                        if response.status_code == 200:
+                            networks = response.json().get("data", [])
+
+                            for net in networks:
+                                iface = net.get("iface", "")
+                                net_type = net.get("type", "")
+
+                                # Bridge mit VLAN-Nummer? (vmbr60, vmbr99, etc.)
+                                if net_type == "bridge" and iface.startswith("vmbr"):
+                                    match = re.match(r"vmbr(\d+)", iface)
+                                    if match:
+                                        vlan_id = int(match.group(1))
+                                        # vmbr0 ist Standard-Bridge, keine VLAN
+                                        if vlan_id == 0:
+                                            continue
+
+                                        if vlan_id not in vlans:
+                                            vlans[vlan_id] = {
+                                                "vlan_id": vlan_id,
+                                                "bridge": iface,
+                                                "nodes": [],
+                                                "vm_count": 0,
+                                            }
+
+                                        if node not in vlans[vlan_id]["nodes"]:
+                                            vlans[vlan_id]["nodes"].append(node)
+
+                    except Exception as e:
+                        print(f"Fehler beim Scannen von Node {node}: {e}")
+                        continue
+
+                # 2. VMs scannen fuer VLAN-Tags und VM-Count
+                all_vms = await self.get_all_vms()
+
+                for vm in all_vms:
+                    vmid = vm.get("vmid")
+                    node = vm.get("node")
+
+                    if not vmid or not node:
+                        continue
+
+                    try:
+                        config_result = await self.get_vm_config(vmid, node)
+                        if not config_result.get("success"):
+                            continue
+
+                        config = config_result.get("config", {})
+
+                        # Alle net* Eintraege durchgehen
+                        for key, value in config.items():
+                            if not key.startswith("net") or not isinstance(value, str):
+                                continue
+
+                            # Bridge extrahieren (bridge=vmbr60)
+                            bridge_match = re.search(r"bridge=(vmbr\d+)", value)
+                            if bridge_match:
+                                bridge = bridge_match.group(1)
+                                vlan_match = re.match(r"vmbr(\d+)", bridge)
+                                if vlan_match:
+                                    vlan_id = int(vlan_match.group(1))
+                                    if vlan_id > 0:
+                                        if vlan_id in vlans:
+                                            vlans[vlan_id]["vm_count"] += 1
+
+                            # VLAN-Tag extrahieren (tag=100)
+                            tag_match = re.search(r"tag=(\d+)", value)
+                            if tag_match:
+                                vlan_id = int(tag_match.group(1))
+                                if vlan_id > 0:
+                                    if vlan_id not in vlans:
+                                        # VLAN nur durch Tag bekannt, Bridge ist vmbr0
+                                        vlans[vlan_id] = {
+                                            "vlan_id": vlan_id,
+                                            "bridge": "vmbr0 (tagged)",
+                                            "nodes": [node] if node else [],
+                                            "vm_count": 1,
+                                        }
+                                    else:
+                                        vlans[vlan_id]["vm_count"] += 1
+                                        if node and node not in vlans[vlan_id]["nodes"]:
+                                            vlans[vlan_id]["nodes"].append(node)
+
+                    except Exception as e:
+                        print(f"Fehler beim Scannen von VM {vmid}: {e}")
+                        continue
+
+            return sorted(vlans.values(), key=lambda x: x["vlan_id"])
+
+        except Exception as e:
+            print(f"Fehler beim VLAN-Scan: {e}")
+            return []
+
 
 # Singleton-Instanz
 proxmox_service = ProxmoxService()
