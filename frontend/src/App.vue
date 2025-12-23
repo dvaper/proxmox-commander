@@ -244,11 +244,11 @@ const fetchHealth = async () => {
 const healthStatus = computed(() => {
   const status = healthData.value.status
   const statusMap = {
-    healthy: { color: 'success', icon: 'mdi-check-circle', label: 'Online' },
-    starting: { color: 'warning', icon: 'mdi-loading mdi-spin', label: 'Starting...' },
-    degraded: { color: 'warning', icon: 'mdi-alert-circle', label: 'Degraded' },
-    error: { color: 'error', icon: 'mdi-close-circle', label: 'Error' },
-    unknown: { color: 'grey', icon: 'mdi-help-circle', label: 'Unknown' },
+    healthy: { color: 'success', icon: 'mdi-check-circle', label: 'Services: Online' },
+    starting: { color: 'warning', icon: 'mdi-loading mdi-spin', label: 'Services: Starting...' },
+    degraded: { color: 'warning', icon: 'mdi-alert-circle', label: 'Services: Degraded' },
+    error: { color: 'error', icon: 'mdi-close-circle', label: 'Services: Error' },
+    unknown: { color: 'grey', icon: 'mdi-help-circle', label: 'Services: Unknown' },
   }
   return statusMap[status] || statusMap.unknown
 })

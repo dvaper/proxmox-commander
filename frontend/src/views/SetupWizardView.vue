@@ -214,9 +214,19 @@
                     Optionale Einstellungen
                   </h3>
 
-                  <v-expansion-panels variant="accordion">
+                  <!-- Warnung wenn Admin-Passwort fehlt -->
+                  <v-alert
+                    v-if="!config.app_admin_password || config.app_admin_password.length < 6"
+                    type="warning"
+                    variant="tonal"
+                    class="mb-4"
+                  >
+                    <strong>Pflichtfeld:</strong> Bitte lege ein Admin-Passwort fest (min. 6 Zeichen).
+                  </v-alert>
+
+                  <v-expansion-panels v-model="optionsPanels" variant="accordion" multiple>
                     <!-- SSH/Ansible -->
-                    <v-expansion-panel>
+                    <v-expansion-panel value="ssh">
                       <v-expansion-panel-title>
                         <v-icon class="mr-2" size="small">mdi-ansible</v-icon>
                         Ansible / SSH
@@ -241,12 +251,15 @@
                     </v-expansion-panel>
 
                     <!-- App Admin -->
-                    <v-expansion-panel>
+                    <v-expansion-panel value="admin">
                       <v-expansion-panel-title>
-                        <v-icon class="mr-2" size="small">mdi-account-key</v-icon>
-                        App Administrator
-                        <v-chip v-if="!config.app_admin_password || config.app_admin_password.length < 6" color="warning" size="x-small" class="ml-2">
-                          Erforderlich
+                        <v-icon class="mr-2" size="small" color="warning">mdi-account-key</v-icon>
+                        <strong>App Administrator</strong>
+                        <v-chip v-if="!config.app_admin_password || config.app_admin_password.length < 6" color="error" size="x-small" class="ml-2">
+                          Pflicht
+                        </v-chip>
+                        <v-chip v-else color="success" size="x-small" class="ml-2">
+                          OK
                         </v-chip>
                       </v-expansion-panel-title>
                       <v-expansion-panel-text>
@@ -294,7 +307,7 @@
                     </v-expansion-panel>
 
                     <!-- NetBox -->
-                    <v-expansion-panel>
+                    <v-expansion-panel value="netbox">
                       <v-expansion-panel-title>
                         <v-icon class="mr-2" size="small">mdi-ip-network-outline</v-icon>
                         NetBox IPAM
@@ -622,6 +635,9 @@ const config = ref({
 
 // NetBox Mode: 'integrated', 'external', 'none'
 const netboxMode = ref('integrated')
+
+// Options Panels - App Admin standardmaessig offen
+const optionsPanels = ref(['admin'])
 
 // UI State
 const showSecret = ref(false)

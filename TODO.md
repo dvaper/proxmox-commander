@@ -2,9 +2,11 @@
 
 ## Setup-Wizard Verbesserungen
 
-- [ ] **App-Admin Panel standardmaessig offen**: Der "App Administrator" Bereich im Setup-Wizard ist in einem zugeklappten Expansion Panel. Benutzer uebersehen ihn leicht. Panel sollte standardmaessig geoeffnet sein oder als separater Schritt.
+- [x] **App-Admin Panel nicht sichtbar genug**: Der "App Administrator" Bereich im Setup-Wizard ist in einem zugeklappten Expansion Panel versteckt. **Geloest**: Panel ist jetzt standardmaessig offen + Warnhinweis wenn Passwort fehlt.
 
-- [ ] **Pflichtfeld deutlicher kennzeichnen**: App-Admin Passwort ist Pflichtfeld (min. 6 Zeichen), aber das ist nicht sofort ersichtlich. Bessere visuelle Kennzeichnung noetig.
+- [x] **Pflichtfeld deutlicher kennzeichnen**: App-Admin Passwort ist Pflichtfeld (min. 6 Zeichen). **Geloest**: Warnung oben im Step + "Pflicht"/"OK" Chip am Panel + Error-Farbe.
+
+- [x] **NetBox Token Laenge pruefen**: Der Setup-Wizard generiert ein NetBox API-Token mit 40 Zeichen hex. **Geprueft**: 40 hex chars ist NetBox Standard-Format (20 Bytes). SECRET_KEY braucht 50+, aber API-Token ist korrekt.
 
 ## Sicherheit
 
@@ -13,6 +15,8 @@
 ## UX Verbesserungen
 
 - [x] **NetBox Status-Anzeige**: Status-Badge im UI zeigt NetBox-Zustand (Starting/Ready/Error) - implementiert in v0.2.4
+
+- [x] **Status-Badge Beschriftung**: Die Status-Badge in der Titel-Bar zeigt nur "Online/Starting/Error" ohne Kontext. **Geloest**: Label geaendert zu "Services: Online/Starting/Error".
 
 ## Technische Schulden (aus Sicherheitsaudit)
 
