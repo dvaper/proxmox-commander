@@ -240,6 +240,59 @@
                       </v-expansion-panel-text>
                     </v-expansion-panel>
 
+                    <!-- App Admin -->
+                    <v-expansion-panel>
+                      <v-expansion-panel-title>
+                        <v-icon class="mr-2" size="small">mdi-account-key</v-icon>
+                        App Administrator
+                        <v-chip v-if="!config.app_admin_password || config.app_admin_password.length < 6" color="warning" size="x-small" class="ml-2">
+                          Erforderlich
+                        </v-chip>
+                      </v-expansion-panel-title>
+                      <v-expansion-panel-text>
+                        <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+                          Lege hier die Zugangsdaten für den Administrator der App fest.
+                          Diese Daten werden für den Login in Proxmox Commander verwendet.
+                        </v-alert>
+
+                        <v-text-field
+                          v-model="config.app_admin_user"
+                          label="Admin-Benutzername"
+                          prepend-inner-icon="mdi-account"
+                          hint="Standard: admin"
+                          persistent-hint
+                          variant="outlined"
+                          density="compact"
+                          class="mb-4"
+                        ></v-text-field>
+
+                        <v-text-field
+                          v-model="config.app_admin_password"
+                          label="Admin-Passwort"
+                          prepend-inner-icon="mdi-lock"
+                          :type="showAppAdminPassword ? 'text' : 'password'"
+                          :append-inner-icon="showAppAdminPassword ? 'mdi-eye' : 'mdi-eye-off'"
+                          @click:append-inner="showAppAdminPassword = !showAppAdminPassword"
+                          hint="Mindestens 6 Zeichen"
+                          persistent-hint
+                          variant="outlined"
+                          density="compact"
+                          class="mb-4"
+                          :rules="[v => !!v || 'Passwort erforderlich', v => (v && v.length >= 6) || 'Min. 6 Zeichen']"
+                        ></v-text-field>
+
+                        <v-text-field
+                          v-model="config.app_admin_email"
+                          label="Admin E-Mail"
+                          prepend-inner-icon="mdi-email"
+                          hint="Optional"
+                          persistent-hint
+                          variant="outlined"
+                          density="compact"
+                        ></v-text-field>
+                      </v-expansion-panel-text>
+                    </v-expansion-panel>
+
                     <!-- NetBox -->
                     <v-expansion-panel>
                       <v-expansion-panel-title>
@@ -407,6 +460,10 @@
                         <td>{{ config.ansible_remote_user }}</td>
                       </tr>
                       <tr>
+                        <td class="font-weight-bold">App Administrator</td>
+                        <td>{{ config.app_admin_user }} / {{ config.app_admin_password ? '******' : '(kein Passwort)' }}</td>
+                      </tr>
+                      <tr>
                         <td class="font-weight-bold">NetBox</td>
                         <td>
                           <span v-if="netboxMode === 'integrated'">
@@ -490,7 +547,7 @@
                 Weiterleitung zur Anmeldung...
               </p>
               <v-alert type="info" variant="tonal" density="compact">
-                <strong>Standard-Login:</strong> admin / admin
+                <strong>Login:</strong> {{ config.app_admin_user }} / (dein Passwort)
               </v-alert>
             </v-card-text>
           </v-card>
@@ -512,9 +569,9 @@
                 docker compose down && docker compose up -d
               </v-code>
               <p class="mt-4 text-grey-darken-1">
-                Nach dem Neustart kannst du dich mit dem Standard-Login anmelden:<br>
-                <strong>Benutzername:</strong> admin<br>
-                <strong>Passwort:</strong> admin
+                Nach dem Neustart kannst du dich mit deinen Zugangsdaten anmelden:<br>
+                <strong>Benutzername:</strong> {{ config.app_admin_user }}<br>
+                <strong>Passwort:</strong> (dein gewähltes Passwort)
               </p>
             </v-card-text>
             <v-card-actions>
@@ -553,6 +610,10 @@ const config = ref({
   default_ssh_user: 'ansible',
   netbox_token: '',
   netbox_url: '',
+  // App Admin Credentials
+  app_admin_user: 'admin',
+  app_admin_password: '',
+  app_admin_email: 'admin@local',
   // NetBox Admin Credentials
   netbox_admin_user: 'admin',
   netbox_admin_password: '',
@@ -564,6 +625,7 @@ const netboxMode = ref('integrated')
 
 // UI State
 const showSecret = ref(false)
+const showAppAdminPassword = ref(false)
 const showNetboxPassword = ref(false)
 const testing = ref(false)
 const saving = ref(false)
@@ -594,7 +656,11 @@ const canProceed = computed(() => {
 })
 
 const canSave = computed(() => {
-  return testResult.value?.success === true
+  // Proxmox-Verbindung muss erfolgreich sein
+  if (!testResult.value?.success) return false
+  // App-Admin Passwort muss mindestens 6 Zeichen haben
+  if (!config.value.app_admin_password || config.value.app_admin_password.length < 6) return false
+  return true
 })
 
 // Methods
@@ -698,6 +764,11 @@ async function saveConfig() {
       proxmox_verify_ssl: config.value.proxmox_verify_ssl,
       ansible_remote_user: config.value.ansible_remote_user,
       default_ssh_user: config.value.default_ssh_user,
+      // App Admin Credentials
+      app_admin_user: config.value.app_admin_user,
+      app_admin_password: config.value.app_admin_password,
+      app_admin_email: config.value.app_admin_email,
+      // NetBox
       netbox_token: netboxToken,
       netbox_url: netboxUrl,
       netbox_admin_user: netboxAdminUser,

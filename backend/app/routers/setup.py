@@ -60,6 +60,11 @@ class SetupConfig(BaseModel):
     netbox_admin_password: str = Field(default="admin", min_length=4, description="NetBox Admin-Passwort")
     netbox_admin_email: str = Field(default="admin@example.com", description="NetBox Admin E-Mail")
 
+    # App Admin Credentials
+    app_admin_user: str = Field(default="admin", description="App Admin-Benutzername")
+    app_admin_password: str = Field(default="", min_length=0, description="App Admin-Passwort (min. 6 Zeichen)")
+    app_admin_email: str = Field(default="admin@local", description="App Admin E-Mail")
+
     # Optionale Einstellungen
     secret_key: Optional[str] = None  # Wird generiert wenn nicht angegeben
     netbox_token: Optional[str] = None
@@ -339,6 +344,10 @@ def save_env_config(config: SetupConfig) -> SetupSaveResult:
         "NETBOX_ADMIN_USER": config.netbox_admin_user,
         "NETBOX_ADMIN_PASSWORD": config.netbox_admin_password,
         "NETBOX_ADMIN_EMAIL": config.netbox_admin_email,
+        # App Admin Credentials
+        "APP_ADMIN_USER": config.app_admin_user,
+        "APP_ADMIN_PASSWORD": config.app_admin_password,
+        "APP_ADMIN_EMAIL": config.app_admin_email,
     }
 
     if config.netbox_token:
