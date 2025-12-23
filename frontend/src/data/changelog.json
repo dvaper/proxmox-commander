@@ -1,5 +1,16 @@
 [
   {
+    "version": "v0.2.11",
+    "date": "2025-12-23",
+    "changes": {
+      "Features": [
+        "Dashboard Re-Design mit 2-spaltigem Layout",
+        "Proxmox Cluster-Nodes in Externe Dienste mit Live-Status",
+        "Schnellzugriff: Playbook erstellen, Mit Proxmox abgleichen"
+      ]
+    }
+  },
+  {
     "version": "v0.2.10",
     "date": "2025-12-23",
     "changes": {

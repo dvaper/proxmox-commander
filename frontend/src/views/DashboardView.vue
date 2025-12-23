@@ -1,7 +1,7 @@
 <template>
   <v-container fluid>
+    <!-- Statistik-Karten (unverändert) -->
     <v-row>
-      <!-- Statistik-Karten -->
       <v-col cols="12" md="3">
         <v-card>
           <v-card-text class="d-flex align-center">
@@ -44,23 +44,25 @@
             <v-icon size="48" color="success" class="mr-4">mdi-play-circle</v-icon>
             <div>
               <div class="text-h4">{{ stats.executions }}</div>
-              <div class="text-subtitle-1">Ausführungen</div>
+              <div class="text-subtitle-1">Ausfuehrungen</div>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
     </v-row>
 
+    <!-- Neues 2-spaltiges Layout -->
     <v-row>
-      <!-- Schnellzugriff -->
-      <v-col cols="12" md="4">
-        <v-card>
+      <!-- Linke Spalte: Schnellzugriff + Letzte Ausfuehrungen -->
+      <v-col cols="12" md="6">
+        <!-- Schnellzugriff -->
+        <v-card class="mb-4">
           <v-card-title>
             <v-icon start>mdi-lightning-bolt</v-icon>
             Schnellzugriff
           </v-card-title>
-          <v-card-text>
-            <v-list>
+          <v-card-text class="pt-0">
+            <v-list density="compact">
               <v-list-item
                 v-for="action in quickActions"
                 :key="action.title"
@@ -68,51 +70,23 @@
                 :title="action.title"
                 :subtitle="action.subtitle"
                 @click="action.action"
-              ></v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <!-- Externe Dienste -->
-      <v-col cols="12" md="4">
-        <v-card>
-          <v-card-title>
-            <v-icon start>mdi-open-in-new</v-icon>
-            Externe Dienste
-          </v-card-title>
-          <v-card-text>
-            <v-list>
-              <v-list-item
-                prepend-icon="mdi-ip-network-outline"
-                title="NetBox IPAM"
-                subtitle="IP-Adressverwaltung"
-                :href="netboxUrl"
-                target="_blank"
               >
-                <template v-slot:append>
-                  <v-icon size="small">mdi-open-in-new</v-icon>
+                <template v-slot:append v-if="action.isNew">
+                  <v-chip size="x-small" color="success" variant="flat">NEU</v-chip>
                 </template>
               </v-list-item>
             </v-list>
-            <v-alert type="info" variant="tonal" density="compact" class="mt-2">
-              <div class="text-caption">
-                <strong>NetBox Login:</strong> (wie im Setup konfiguriert)
-              </div>
-            </v-alert>
           </v-card-text>
         </v-card>
-      </v-col>
 
-      <!-- Letzte Ausführungen -->
-      <v-col cols="12" md="4">
+        <!-- Letzte Ausfuehrungen -->
         <v-card>
           <v-card-title>
             <v-icon start>mdi-history</v-icon>
-            Letzte Ausführungen
+            Letzte Ausfuehrungen
           </v-card-title>
-          <v-card-text>
-            <v-list v-if="recentExecutions.length">
+          <v-card-text class="pt-0">
+            <v-list v-if="recentExecutions.length" density="compact">
               <v-list-item
                 v-for="exec in recentExecutions"
                 :key="exec.id"
@@ -132,8 +106,84 @@
               </v-list-item>
             </v-list>
             <div v-else class="text-center text-grey py-4">
-              Keine Ausführungen vorhanden
+              Keine Ausfuehrungen vorhanden
             </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <!-- Rechte Spalte: Externe Dienste -->
+      <v-col cols="12" md="6">
+        <v-card>
+          <v-card-title>
+            <v-icon start>mdi-open-in-new</v-icon>
+            Externe Dienste
+          </v-card-title>
+          <v-card-text class="pt-0">
+            <!-- Proxmox Cluster -->
+            <div class="text-overline text-grey mb-1">PROXMOX {{ proxmoxNodes.length > 1 ? 'CLUSTER' : '' }}</div>
+            <v-list density="compact">
+              <v-list-item
+                v-for="node in proxmoxNodes"
+                :key="node.name"
+                :href="`https://${node.ip}:8006`"
+                target="_blank"
+              >
+                <template v-slot:prepend>
+                  <v-icon :color="getNodeStatusColor(node.status)" size="small">
+                    mdi-server
+                  </v-icon>
+                </template>
+                <v-list-item-title class="d-flex align-center">
+                  {{ node.name }}
+                  <v-chip
+                    v-if="node.status === 'online'"
+                    size="x-small"
+                    color="success"
+                    variant="tonal"
+                    class="ml-2"
+                  >online</v-chip>
+                  <v-chip
+                    v-else-if="node.status === 'offline'"
+                    size="x-small"
+                    color="error"
+                    variant="tonal"
+                    class="ml-2"
+                  >offline</v-chip>
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ node.ip }} | {{ node.cpus }} CPU | {{ node.ram_gb }} GB RAM
+                </v-list-item-subtitle>
+                <template v-slot:append>
+                  <v-icon size="small">mdi-open-in-new</v-icon>
+                </template>
+              </v-list-item>
+            </v-list>
+
+            <v-divider class="my-3"></v-divider>
+
+            <!-- Weitere Dienste -->
+            <div class="text-overline text-grey mb-1">WEITERE DIENSTE</div>
+            <v-list density="compact">
+              <v-list-item
+                prepend-icon="mdi-ip-network-outline"
+                title="NetBox IPAM"
+                subtitle="IP-Adressverwaltung"
+                :href="netboxUrl"
+                target="_blank"
+              >
+                <template v-slot:append>
+                  <v-icon size="small">mdi-open-in-new</v-icon>
+                </template>
+              </v-list-item>
+            </v-list>
+
+            <v-alert type="info" variant="tonal" density="compact" class="mt-3">
+              <div class="text-caption">
+                <strong>Proxmox:</strong> terraform@pve Token-Auth<br>
+                <strong>NetBox:</strong> Wie im Setup konfiguriert
+              </div>
+            </v-alert>
           </v-card-text>
         </v-card>
       </v-col>
@@ -163,7 +213,9 @@ const stats = ref({
 })
 
 const recentExecutions = ref([])
+const proxmoxNodes = ref([])
 
+// Schnellzugriff-Aktionen (erweitert)
 const quickActions = [
   {
     icon: 'mdi-server-plus',
@@ -173,9 +225,16 @@ const quickActions = [
   },
   {
     icon: 'mdi-play',
-    title: 'Playbook ausführen',
-    subtitle: 'Ansible-Playbook auf Hosts ausführen',
+    title: 'Playbook ausfuehren',
+    subtitle: 'Ansible-Playbook auf Hosts ausfuehren',
     action: () => router.push('/executions?new=1'),
+  },
+  {
+    icon: 'mdi-file-plus',
+    title: 'Playbook erstellen',
+    subtitle: 'Neues Ansible-Playbook anlegen',
+    action: () => router.push('/playbooks?new=1'),
+    isNew: true,
   },
   {
     icon: 'mdi-server-network',
@@ -184,12 +243,25 @@ const quickActions = [
     action: () => router.push('/inventory'),
   },
   {
+    icon: 'mdi-sync',
+    title: 'Mit Proxmox abgleichen',
+    subtitle: 'IPs von VMs nach NetBox sync',
+    action: () => router.push('/netbox?tab=prefixes'),
+    isNew: true,
+  },
+  {
     icon: 'mdi-refresh',
     title: 'Inventory neu laden',
     subtitle: 'hosts.yml neu einlesen',
     action: reloadInventory,
   },
 ]
+
+function getNodeStatusColor(status) {
+  if (status === 'online') return 'success'
+  if (status === 'offline') return 'error'
+  return 'grey'
+}
 
 async function loadStats() {
   try {
@@ -213,6 +285,39 @@ async function loadStats() {
   }
 }
 
+async function loadProxmoxNodes() {
+  try {
+    // Statische Node-Infos laden
+    const nodesResponse = await api.get('/api/terraform/nodes')
+    const nodes = nodesResponse.data
+
+    // Live-Stats laden fuer Status
+    try {
+      const statsResponse = await api.get('/api/terraform/nodes/stats')
+      const nodeStats = statsResponse.data
+
+      // Stats mit Node-Infos mergen
+      proxmoxNodes.value = nodes.map(node => {
+        const stats = nodeStats.find(s => s.name === node.name)
+        return {
+          ...node,
+          status: stats?.status || 'unknown',
+          cpu_usage: stats?.cpu_usage || 0,
+          memory_percent: stats?.memory_percent || 0,
+        }
+      })
+    } catch (e) {
+      // Falls Stats nicht verfuegbar, nur statische Infos anzeigen
+      proxmoxNodes.value = nodes.map(node => ({
+        ...node,
+        status: 'unknown',
+      }))
+    }
+  } catch (e) {
+    console.error('Proxmox Nodes laden fehlgeschlagen:', e)
+  }
+}
+
 async function reloadInventory() {
   try {
     await api.post('/api/inventory/reload')
@@ -222,5 +327,8 @@ async function reloadInventory() {
   }
 }
 
-onMounted(loadStats)
+onMounted(() => {
+  loadStats()
+  loadProxmoxNodes()
+})
 </script>
