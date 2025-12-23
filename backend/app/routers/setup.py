@@ -154,6 +154,32 @@ def generate_netbox_secret_key() -> str:
     return ''.join(secrets.choice(charset) for _ in range(60))
 
 
+def quote_env_value(value: str) -> str:
+    """
+    Quoted einen Wert fuer .env Dateien korrekt.
+
+    Regeln:
+    - Werte mit Sonderzeichen (#, $, ", ', Leerzeichen, Backslash) werden in
+      einfache Anführungszeichen gesetzt
+    - Einfache Anführungszeichen im Wert werden escaped ('"'"')
+    - Leere Werte bleiben leer
+    - Einfache alphanumerische Werte bleiben unquoted
+    """
+    if not value:
+        return ""
+
+    # Zeichen die Quoting erfordern
+    needs_quoting = any(c in value for c in '#$"\' \\')
+
+    if not needs_quoting:
+        return value
+
+    # Mit einfachen Quotes: Einfache Quotes im Wert escapen
+    # 'foo'bar' wird zu 'foo'"'"'bar'
+    escaped = value.replace("'", "'\"'\"'")
+    return f"'{escaped}'"
+
+
 async def validate_proxmox_connection(config: ProxmoxConfig) -> ProxmoxValidationResult:
     """Testet die Proxmox-Verbindung mit den angegebenen Credentials"""
     import httpx
@@ -449,7 +475,8 @@ async def save_env_config(config: SetupConfig) -> SetupSaveResult:
                 if line and not line.startswith("#") and "=" in line:
                     key = line.split("=")[0]
                     if key in new_values:
-                        f.write(f"{key}={new_values[key]}\n")
+                        quoted_value = quote_env_value(str(new_values[key]))
+                        f.write(f"{key}={quoted_value}\n")
                         written_keys.add(key)
                     else:
                         f.write(f"{line}\n")
@@ -459,7 +486,8 @@ async def save_env_config(config: SetupConfig) -> SetupSaveResult:
             # Neue Werte hinzufuegen
             for key, value in new_values.items():
                 if key not in written_keys:
-                    f.write(f"{key}={value}\n")
+                    quoted_value = quote_env_value(str(value))
+                    f.write(f"{key}={quoted_value}\n")
 
         logger.info(f"Setup-Konfiguration gespeichert in {env_path}")
 

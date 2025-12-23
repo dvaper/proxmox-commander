@@ -1,5 +1,14 @@
 [
   {
+    "version": "v0.2.14",
+    "date": "2025-12-23",
+    "changes": {
+      "Bugfixes": [
+        "Setup: Sonderzeichen in Passwoertern (#, $, ', \", etc.) werden korrekt in .env gespeichert"
+      ]
+    }
+  },
+  {
     "version": "v0.2.13",
     "date": "2025-12-23",
     "changes": {
