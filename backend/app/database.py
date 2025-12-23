@@ -86,18 +86,31 @@ async def create_default_admin():
         user_count = result.scalar()
 
         if user_count == 0:
-            logger.info("Keine User gefunden - erstelle Default-Admin...")
+            # Admin-Credentials aus Settings oder generieren
+            admin_user = settings.app_admin_user or "admin"
+            admin_email = settings.app_admin_email or "admin@local"
+
+            if settings.app_admin_password:
+                admin_password = settings.app_admin_password
+                logger.info(f"Erstelle Admin-User '{admin_user}' mit konfiguriertem Passwort")
+            else:
+                # Fallback: Generiertes Passwort
+                import secrets
+                admin_password = secrets.token_urlsafe(12)
+                logger.warning(f"Kein Admin-Passwort konfiguriert - generiere zufaelliges Passwort")
+                logger.warning(f"ACHTUNG: Generiertes Admin-Passwort: {admin_password}")
+                logger.warning("Bitte dieses Passwort notieren oder im Setup-Wizard ein eigenes setzen!")
+
             admin = User(
-                username="admin",
-                password_hash=get_password_hash("admin"),
-                email="admin@local",
+                username=admin_user,
+                password_hash=get_password_hash(admin_password),
+                email=admin_email,
                 is_admin=True,
                 is_super_admin=True,
                 is_active=True,
             )
             session.add(admin)
             await session.commit()
-            logger.info("Default-Admin erstellt (username: admin, password: admin)")
-            logger.warning("WICHTIG: Bitte das Admin-Passwort nach dem ersten Login aendern!")
+            logger.info(f"Admin-User '{admin_user}' erfolgreich erstellt")
         else:
             logger.debug(f"User existieren bereits ({user_count}), ueberspringe Default-Admin")

@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24  # 24 Stunden
 
+    # App Admin (aus Setup-Wizard)
+    app_admin_user: str = "admin"
+    app_admin_password: Optional[str] = None  # Wenn None, wird generiert
+    app_admin_email: str = "admin@local"
+
     # ==========================================================================
     # Datenbank
     # ==========================================================================

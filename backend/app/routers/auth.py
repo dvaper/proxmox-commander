@@ -172,11 +172,24 @@ async def init_admin(
             detail="Admin-User existiert bereits. Verwende /api/auth/login",
         )
 
-    # Initialen Super-Admin erstellen
+    # Admin-Credentials aus Settings oder generieren
+    from app.config import settings
+    import secrets
+
+    admin_user = settings.app_admin_user or "admin"
+    admin_email = settings.app_admin_email or "admin@local"
+
+    if settings.app_admin_password:
+        admin_password = settings.app_admin_password
+    else:
+        # Fallback: Generiertes Passwort (wird im Response nicht angezeigt!)
+        admin_password = secrets.token_urlsafe(12)
+        # Hinweis: Das generierte Passwort wird in den Container-Logs ausgegeben
+
     admin = User(
-        username="admin",
-        password_hash=get_password_hash("admin"),
-        email="admin@local",
+        username=admin_user,
+        password_hash=get_password_hash(admin_password),
+        email=admin_email,
         is_admin=True,  # Legacy
         is_super_admin=True,
         is_active=True,
