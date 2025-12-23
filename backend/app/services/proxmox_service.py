@@ -1182,6 +1182,147 @@ class ProxmoxService:
             print(f"Fehler beim VLAN-Scan: {e}")
             return []
 
+    async def scan_vm_ips(self) -> list[dict]:
+        """
+        Scannt alle Proxmox-VMs nach IP-Adressen.
+
+        Versucht IPs zu ermitteln via:
+        1. QEMU Guest Agent (genaueste Methode)
+        2. Cloud-Init Konfiguration (Fallback)
+
+        Returns:
+            Liste von dicts mit:
+            - vmid: int
+            - name: str
+            - node: str
+            - ip: str
+            - source: str ('guest-agent' | 'cloud-init' | 'unknown')
+        """
+        import re
+
+        if not self.is_configured():
+            return []
+
+        results = []
+
+        try:
+            all_vms = await self.get_all_vms()
+
+            for vm in all_vms:
+                vmid = vm.get("vmid")
+                name = vm.get("name", f"VM-{vmid}")
+                node = vm.get("node")
+                status = vm.get("status")
+
+                if not vmid or not node:
+                    continue
+
+                ip = None
+                source = "unknown"
+
+                # 1. Versuche QEMU Guest Agent (nur wenn VM laeuft)
+                if status == "running":
+                    try:
+                        ip, source = await self._get_ip_from_guest_agent(vmid, node)
+                    except Exception:
+                        pass
+
+                # 2. Fallback: Cloud-Init Config
+                if not ip:
+                    try:
+                        ip, source = await self._get_ip_from_config(vmid, node)
+                    except Exception:
+                        pass
+
+                if ip:
+                    results.append({
+                        "vmid": vmid,
+                        "name": name,
+                        "node": node,
+                        "ip": ip,
+                        "status": status,
+                        "source": source,
+                    })
+
+            return sorted(results, key=lambda x: x["vmid"])
+
+        except Exception as e:
+            print(f"Fehler beim VM-IP-Scan: {e}")
+            return []
+
+    async def _get_ip_from_guest_agent(
+        self, vmid: int, node: str
+    ) -> tuple[Optional[str], str]:
+        """
+        Holt IP-Adresse via QEMU Guest Agent.
+
+        Returns:
+            Tuple (ip, source) oder (None, 'unknown')
+        """
+        import re
+
+        headers = self._get_headers()
+
+        async with httpx.AsyncClient(verify=self.verify_ssl) as client:
+            response = await client.get(
+                f"{self.base_url}/nodes/{node}/qemu/{vmid}/agent/network-get-interfaces",
+                headers=headers,
+                timeout=5.0,
+            )
+
+            if response.status_code != 200:
+                return None, "unknown"
+
+            data = response.json().get("data", {})
+            result = data.get("result", [])
+
+            # Suche nach nicht-localhost IPv4-Adresse
+            for iface in result:
+                iface_name = iface.get("name", "")
+                # Ignoriere loopback
+                if iface_name == "lo":
+                    continue
+
+                ip_addresses = iface.get("ip-addresses", [])
+                for ip_info in ip_addresses:
+                    ip_type = ip_info.get("ip-address-type", "")
+                    ip_addr = ip_info.get("ip-address", "")
+
+                    # Nur IPv4, keine Link-Local
+                    if ip_type == "ipv4" and not ip_addr.startswith("127."):
+                        return ip_addr, "guest-agent"
+
+        return None, "unknown"
+
+    async def _get_ip_from_config(
+        self, vmid: int, node: str
+    ) -> tuple[Optional[str], str]:
+        """
+        Holt IP-Adresse aus VM-Config (Cloud-Init ipconfig).
+
+        Returns:
+            Tuple (ip, source) oder (None, 'unknown')
+        """
+        import re
+
+        config_result = await self.get_vm_config(vmid, node)
+        if not config_result.get("success"):
+            return None, "unknown"
+
+        config = config_result.get("config", {})
+
+        # Suche nach ipconfig0, ipconfig1, etc.
+        for key, value in config.items():
+            if not key.startswith("ipconfig") or not isinstance(value, str):
+                continue
+
+            # Format: ip=192.168.60.101/24,gw=192.168.60.1
+            ip_match = re.search(r"ip=(\d+\.\d+\.\d+\.\d+)", value)
+            if ip_match:
+                return ip_match.group(1), "cloud-init"
+
+        return None, "unknown"
+
 
 # Singleton-Instanz
 proxmox_service = ProxmoxService()

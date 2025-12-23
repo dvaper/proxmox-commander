@@ -82,6 +82,81 @@
         <!-- Tab: Prefixes -->
         <v-window-item value="prefixes">
           <v-card-text>
+            <!-- Sync Button und Info -->
+            <div class="d-flex align-center mb-4">
+              <v-btn
+                color="primary"
+                @click="syncIPs"
+                :loading="syncing"
+              >
+                <v-icon start>mdi-sync</v-icon>
+                Mit Proxmox abgleichen
+              </v-btn>
+              <span v-if="lastSyncTime" class="ml-4 text-caption text-grey">
+                Letzter Sync: {{ lastSyncTime }}
+              </span>
+            </div>
+
+            <!-- Sync-Ergebnis -->
+            <v-alert
+              v-if="syncResult"
+              :type="syncResult.errors?.length > 0 ? 'warning' : 'success'"
+              variant="tonal"
+              class="mb-4"
+              closable
+              @click:close="syncResult = null"
+            >
+              <div class="d-flex align-center">
+                <div>
+                  <strong>{{ syncResult.scanned }}</strong> VMs gescannt |
+                  <strong>{{ syncResult.created }}</strong> IPs angelegt |
+                  <strong>{{ syncResult.skipped }}</strong> bereits vorhanden
+                </div>
+              </div>
+              <div v-if="syncResult.errors?.length > 0" class="mt-2">
+                <strong>Fehler:</strong>
+                <ul class="mb-0">
+                  <li v-for="(error, i) in syncResult.errors" :key="i">{{ error }}</li>
+                </ul>
+              </div>
+            </v-alert>
+
+            <!-- Scanned IPs expandable -->
+            <v-expansion-panels v-if="syncResult?.ips?.length > 0" class="mb-4">
+              <v-expansion-panel>
+                <v-expansion-panel-title>
+                  <v-icon start>mdi-server</v-icon>
+                  {{ syncResult.ips.length }} VMs mit IP gefunden
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <v-data-table
+                    :headers="syncIpHeaders"
+                    :items="syncResult.ips"
+                    density="compact"
+                    :items-per-page="10"
+                  >
+                    <template v-slot:item.ip="{ item }">
+                      <code>{{ item.ip }}</code>
+                    </template>
+                    <template v-slot:item.source="{ item }">
+                      <v-chip size="x-small" :color="item.source === 'guest-agent' ? 'success' : 'info'" variant="outlined">
+                        {{ item.source }}
+                      </v-chip>
+                    </template>
+                    <template v-slot:item.exists_in_netbox="{ item }">
+                      <v-icon v-if="item.exists_in_netbox" color="success" size="small">mdi-check-circle</v-icon>
+                      <v-chip v-else size="x-small" color="warning" variant="flat">NEU</v-chip>
+                    </template>
+                    <template v-slot:item.status="{ item }">
+                      <v-chip size="x-small" :color="item.status === 'running' ? 'success' : 'grey'" variant="outlined">
+                        {{ item.status }}
+                      </v-chip>
+                    </template>
+                  </v-data-table>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+
             <v-data-table
               :headers="prefixHeaders"
               :items="prefixes"
@@ -268,6 +343,19 @@ const prefixHeaders = [
   { title: 'Auslastung', key: 'utilization', width: '150px' },
 ]
 
+// IP Sync
+const syncing = ref(false)
+const syncResult = ref(null)
+const lastSyncTime = ref(null)
+const syncIpHeaders = [
+  { title: 'VMID', key: 'vmid', width: '80px' },
+  { title: 'Name', key: 'name' },
+  { title: 'IP', key: 'ip', width: '140px' },
+  { title: 'Quelle', key: 'source', width: '100px' },
+  { title: 'Status', key: 'status', width: '100px' },
+  { title: 'In NetBox', key: 'exists_in_netbox', width: '100px' },
+]
+
 // Import Tab
 const proxmoxVlans = ref([])
 const selectedVlans = ref([])
@@ -305,6 +393,31 @@ async function loadPrefixes() {
     console.error('Fehler beim Laden der Prefixes:', error)
   } finally {
     loadingPrefixes.value = false
+  }
+}
+
+// IPs mit Proxmox synchronisieren
+async function syncIPs() {
+  syncing.value = true
+  syncResult.value = null
+  try {
+    const response = await api.post('/api/netbox/sync-ips')
+    syncResult.value = response.data
+    lastSyncTime.value = new Date().toLocaleTimeString('de-DE')
+
+    // Prefixes neu laden um Auslastung zu aktualisieren
+    await loadPrefixes()
+  } catch (error) {
+    console.error('Fehler beim IP-Sync:', error)
+    syncResult.value = {
+      scanned: 0,
+      created: 0,
+      skipped: 0,
+      errors: [error.response?.data?.detail || 'Unbekannter Fehler'],
+      ips: []
+    }
+  } finally {
+    syncing.value = false
   }
 }
 

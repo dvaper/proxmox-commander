@@ -1,5 +1,16 @@
 [
   {
+    "version": "v0.2.10",
+    "date": "2025-12-23",
+    "changes": {
+      "Features": [
+        "IP-Sync: Proxmox VMs scannen und IPs nach NetBox synchronisieren",
+        "Button 'Mit Proxmox abgleichen' im Prefixes-Tab",
+        "IP-Erkennung via QEMU Guest Agent und Cloud-Init Config"
+      ]
+    }
+  },
+  {
     "version": "v0.2.9",
     "date": "2025-12-23",
     "changes": {

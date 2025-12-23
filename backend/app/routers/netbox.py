@@ -63,6 +63,27 @@ class VLANImportResult(BaseModel):
     errors: list[str]
 
 
+class ProxmoxIP(BaseModel):
+    """IP aus Proxmox-Scan"""
+    vmid: int
+    name: str
+    node: str
+    ip: str
+    status: str
+    source: str  # 'guest-agent' | 'cloud-init'
+    exists_in_netbox: bool = False
+    prefix: Optional[str] = None
+
+
+class IPSyncResult(BaseModel):
+    """IP-Sync Ergebnis"""
+    scanned: int
+    created: int
+    skipped: int
+    errors: list[str]
+    ips: list[ProxmoxIP]
+
+
 # =============================================================================
 # Endpoints
 # =============================================================================
@@ -189,3 +210,99 @@ async def import_vlans(
         skipped=skipped,
         errors=errors
     )
+
+
+@router.post("/sync-ips", response_model=IPSyncResult)
+async def sync_ips_from_proxmox(
+    current_user: User = Depends(get_current_admin_user)
+):
+    """
+    Scannt Proxmox VMs und synchronisiert IPs nach NetBox.
+
+    - Neue IPs werden in NetBox angelegt
+    - Existierende IPs werden uebersprungen
+    - Erfordert Admin-Rechte
+    """
+    created = 0
+    skipped = 0
+    errors = []
+    result_ips = []
+
+    try:
+        # 1. Proxmox VMs scannen
+        proxmox_ips = await proxmox_service.scan_vm_ips()
+
+        # 2. Prefixes aus NetBox holen fuer Zuordnung
+        prefixes = await netbox_service.get_prefixes_with_utilization()
+
+        for vm_ip in proxmox_ips:
+            ip = vm_ip.get("ip")
+            if not ip:
+                continue
+
+            # Prefix fuer diese IP finden
+            matching_prefix = None
+            for prefix in prefixes:
+                if _ip_in_prefix(ip, prefix.get("prefix", "")):
+                    matching_prefix = prefix.get("prefix")
+                    break
+
+            # Pruefen ob IP bereits in NetBox existiert
+            try:
+                ip_exists = not await netbox_service.check_ip_available(ip)
+            except Exception:
+                ip_exists = False
+
+            result_ips.append(ProxmoxIP(
+                vmid=vm_ip.get("vmid"),
+                name=vm_ip.get("name", ""),
+                node=vm_ip.get("node", ""),
+                ip=ip,
+                status=vm_ip.get("status", "unknown"),
+                source=vm_ip.get("source", "unknown"),
+                exists_in_netbox=ip_exists,
+                prefix=matching_prefix,
+            ))
+
+            if ip_exists:
+                skipped += 1
+                continue
+
+            # IP in NetBox anlegen
+            try:
+                await netbox_service.reserve_ip(
+                    ip_address=ip,
+                    description=f"{vm_ip.get('name', '')} (VMID: {vm_ip.get('vmid')})",
+                    dns_name=vm_ip.get("name", ""),
+                )
+                # Status auf active setzen (VM laeuft ja)
+                if vm_ip.get("status") == "running":
+                    await netbox_service.activate_ip(ip)
+                created += 1
+                logger.info(f"IP {ip} fuer VM {vm_ip.get('name')} in NetBox angelegt")
+            except Exception as e:
+                errors.append(f"{ip}: {str(e)}")
+                logger.error(f"Fehler beim Anlegen von IP {ip}: {e}")
+
+        return IPSyncResult(
+            scanned=len(proxmox_ips),
+            created=created,
+            skipped=skipped,
+            errors=errors,
+            ips=result_ips,
+        )
+
+    except Exception as e:
+        logger.error(f"Fehler beim IP-Sync: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _ip_in_prefix(ip: str, prefix: str) -> bool:
+    """Prueft ob eine IP in einem Prefix liegt."""
+    import ipaddress
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+        network = ipaddress.ip_network(prefix, strict=False)
+        return ip_obj in network
+    except Exception:
+        return False
