@@ -16,6 +16,36 @@
 
 ---
 
+## Zielgruppe
+
+Proxmox Commander richtet sich an:
+
+### Homelab-Betreiber
+- **Einzel-Node bis Multi-Node Cluster** - Verwalte deinen Proxmox-Cluster ueber eine zentrale Oberflaeche
+- **Automatisierte VM-Erstellung** - Cloud-Init Profile fuer schnelle Deployments
+- **Lernumgebung** - Experimentiere mit Infrastructure-as-Code ohne Produktionsrisiko
+
+### Kleine IT-Teams / KMU
+- **Self-Service Portal** - Entwickler koennen VMs selbst anfordern
+- **IP-Adressverwaltung** - NetBox IPAM verhindert IP-Konflikte
+- **Audit-Trail** - Nachvollziehbare Aenderungen durch Ansible Execution History
+
+### DevOps / Platform Engineers
+- **GitOps-ready** - Terraform State und Ansible Playbooks als Code
+- **API-first** - REST API fuer Integration in bestehende Pipelines
+- **Multi-Tool Integration** - Proxmox + NetBox + Ansible + Terraform in einer UI
+
+### Voraussetzungen fuer Nutzer
+
+| Bereich | Grundkenntnisse | Erweiterte Nutzung |
+|---------|-----------------|-------------------|
+| **Proxmox VE** | Web-UI Bedienung, VM-Erstellung | API-Tokens, Templates, Cloud-Init |
+| **Linux** | SSH, Basiskommandos | Ansible, Systemd, Netzwerk |
+| **Docker** | `docker compose up/down` | Volumes, Networking, Logs |
+| **Netzwerk** | IP-Adressen, Subnets | VLANs, Bridges, DNS |
+
+---
+
 ## Features
 
 - **VM-Deployment** via Terraform mit automatischer IP-Vergabe aus NetBox
@@ -240,30 +270,129 @@ docker compose restart netbox netbox-worker netbox-housekeeping
 
 ## Architektur
 
+```mermaid
+flowchart TB
+    subgraph Docker["Docker Compose Stack"]
+        subgraph Frontend["Frontend Container"]
+            nginx["Nginx\n:8080"]
+            vue["Vue.js 3\nVuetify 3"]
+        end
+
+        subgraph Backend["Backend Container"]
+            fastapi["FastAPI\n:8000"]
+            ansible["Ansible\nEngine"]
+            terraform["Terraform\nProvider"]
+        end
+
+        subgraph NetBoxStack["NetBox Stack"]
+            netbox["NetBox\n:8081"]
+            postgres[(PostgreSQL)]
+            redis[(Redis)]
+        end
+
+        sqlite[(SQLite\nApp DB)]
+    end
+
+    subgraph External["Externe Systeme"]
+        proxmox["Proxmox VE\nCluster"]
+        vms["VMs &\nTargets"]
+    end
+
+    nginx --> fastapi
+    fastapi --> sqlite
+    fastapi --> netbox
+    netbox --> postgres
+    netbox --> redis
+    fastapi -->|"API Token"| proxmox
+    fastapi -->|"SSH/Ansible"| vms
+    terraform -->|"bpg/proxmox"| proxmox
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Docker Network                            │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
-│  │   Frontend   │  │   Backend    │  │     NetBox       │   │
-│  │   (Nginx)    │──│   (FastAPI)  │──│   (Django)       │   │
-│  │   :8080      │  │   :8000      │  │   :8081          │   │
-│  └──────────────┘  └──────────────┘  └──────────────────┘   │
-│                           │                   │              │
-│                           │          ┌────────┴───────┐      │
-│                           │          │                │      │
-│                    ┌──────┴──────┐   │   PostgreSQL   │      │
-│                    │   SQLite    │   │   Redis        │      │
-│                    │   (App DB)  │   │   (NetBox)     │      │
-│                    └─────────────┘   └────────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-                           │
-              ┌────────────┴────────────┐
-              │                         │
-       ┌──────┴──────┐          ┌───────┴───────┐
-       │  Proxmox    │          │   Ansible     │
-       │  Cluster    │          │   Targets     │
-       └─────────────┘          └───────────────┘
+
+### Komponenten-Uebersicht
+
+| Komponente | Technologie | Funktion |
+|------------|-------------|----------|
+| **Frontend** | Vue.js 3 + Vuetify 3 | Single-Page Application |
+| **Backend** | FastAPI (Python) | REST API, WebSocket, Ansible/Terraform Runner |
+| **NetBox** | Django (Python) | IPAM/DCIM - IP-Adressverwaltung |
+| **Datenbank** | SQLite (App), PostgreSQL (NetBox) | Persistenz |
+| **Terraform** | bpg/proxmox Provider | VM-Provisioning |
+| **Ansible** | Built-in | Konfigurationsmanagement |
+
+## Deployment in eigene Umgebung
+
+### Schnellstart (Empfohlen)
+
+Die einfachste Methode fuer eine neue Umgebung:
+
+```bash
+# 1. Nur docker-compose.yml herunterladen
+mkdir proxmox-commander && cd proxmox-commander
+curl -LO https://github.com/YOUR-REPO/docker-proxmox-commander/raw/main/docker-compose.yml
+
+# 2. Container starten
+docker compose up -d
+
+# 3. Setup-Wizard durchfuehren
+# Browser: http://<server-ip>:8080/setup
 ```
+
+Der Setup-Wizard konfiguriert automatisch:
+- Proxmox API-Verbindung
+- Admin-Benutzer und Passwort
+- NetBox Integration
+- Terraform Provider
+
+### Anpassungen fuer Produktivbetrieb
+
+| Aspekt | Standard | Empfehlung |
+|--------|----------|------------|
+| **Secrets** | Auto-generiert | In `.env` persistent speichern |
+| **Reverse Proxy** | Direkt :8080/:8081 | Nginx/Traefik mit SSL davor |
+| **Backup** | Keins | `./data/` regelmaessig sichern |
+| **Updates** | Manuell | `docker compose pull && up -d` |
+
+### Bekannte Einschraenkungen
+
+> **Hinweis:** Einige Features sind aktuell fuer eine spezifische Homelab-Umgebung optimiert.
+> Bei Deployment in anderen Umgebungen:
+
+| Feature | Status | Workaround |
+|---------|--------|------------|
+| Cloud-Init Phone-Home | Hardcodierte URL | Callback-URL im Backend anpassen |
+| Cloud-Init SSH-Keys | Hardcodiert | Keys in Cloud-Init Profilen anpassen |
+| Proxmox Node-Namen | "Mittelerde"-Theme | Funktioniert mit beliebigen Namen |
+| NAS Snippets-Pfad | Spezifisch | Storage-Pfad anpassen |
+
+Diese Einschraenkungen werden in zukuenftigen Versionen durch Konfigurationsoptionen ersetzt.
+
+### Systemanforderungen
+
+| Ressource | Minimum | Empfohlen | Hinweis |
+|-----------|---------|-----------|---------|
+| **CPU** | 2 Cores | 4 Cores | NetBox braucht CPU beim Start |
+| **RAM** | 4 GB | 8 GB | NetBox + PostgreSQL speicherintensiv |
+| **Disk** | 10 GB | 20 GB | Logs, DB, Terraform State |
+| **OS** | Linux x86_64 | Debian/Ubuntu | Docker muss laufen |
+
+### Netzwerk-Voraussetzungen
+
+```
+┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│   Browser       │─────▶│  Proxmox Cmdr   │─────▶│   Proxmox VE    │
+│   (User)        │:8080 │  (Docker Host)  │:8006 │   (API)         │
+└─────────────────┘      └────────┬────────┘      └─────────────────┘
+                                  │:22
+                                  ▼
+                         ┌─────────────────┐
+                         │   VMs/Targets   │
+                         │   (Ansible)     │
+                         └─────────────────┘
+```
+
+- **Outbound :8006** - Proxmox API (TCP)
+- **Outbound :22** - SSH zu VMs fuer Ansible
+- **Inbound :8080** - Web-UI (optional :8081 fuer NetBox direkt)
 
 ## Lizenz
 
