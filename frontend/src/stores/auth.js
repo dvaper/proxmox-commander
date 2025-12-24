@@ -12,6 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const accessSummary = ref(null)
   const currentTheme = ref(localStorage.getItem('theme') || 'blue')
+  const currentDarkMode = ref(localStorage.getItem('darkMode') || 'dark')
 
   // Getters
   const isAuthenticated = computed(() => !!token.value)
@@ -20,6 +21,14 @@ export const useAuthStore = defineStore('auth', () => {
   const canManageSettings = computed(() => isSuperAdmin.value)
   const accessibleGroups = computed(() => user.value?.accessible_groups ?? [])
   const accessiblePlaybooks = computed(() => user.value?.accessible_playbooks ?? [])
+
+  // Ermittelt ob System Dark-Mode bevorzugt
+  const systemPrefersDark = computed(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+    }
+    return true // Default: dark
+  })
 
   // Actions
   async function login(username, password) {
@@ -47,9 +56,15 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await api.get('/api/auth/me')
       user.value = response.data
 
-      // Theme aus User-Profil laden und anwenden
-      if (response.data.theme) {
-        applyTheme(response.data.theme)
+      // Preferences laden und anwenden
+      try {
+        const prefsResponse = await api.get('/api/auth/me/preferences')
+        applyTheme(prefsResponse.data.theme, prefsResponse.data.dark_mode)
+      } catch {
+        // Fallback auf User-Theme
+        if (response.data.theme) {
+          applyTheme(response.data.theme, 'dark')
+        }
       }
 
       return response.data
@@ -60,29 +75,48 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function applyTheme(themeName) {
+  function applyTheme(themeName, darkMode = null) {
     const validThemes = ['blue', 'orange', 'green', 'purple', 'teal']
     const theme = validThemes.includes(themeName) ? themeName : 'blue'
+
+    // Dark Mode bestimmen
+    if (darkMode !== null) {
+      currentDarkMode.value = darkMode
+      localStorage.setItem('darkMode', darkMode)
+    }
 
     currentTheme.value = theme
     localStorage.setItem('theme', theme)
 
-    // Vuetify Theme setzen (wird in App.vue beobachtet)
+    // Effektiven Dark-Mode bestimmen (system = System-Praeferenz)
+    let isDark = true
+    if (currentDarkMode.value === 'light') {
+      isDark = false
+    } else if (currentDarkMode.value === 'system') {
+      isDark = systemPrefersDark.value
+    }
+
+    // Vuetify Theme-Name zusammensetzen: z.B. "blueDark" oder "blueLight"
+    const vuetifyThemeName = theme + (isDark ? 'Dark' : 'Light')
+
+    // Vuetify Theme setzen
     try {
       const vuetifyTheme = useTheme()
-      vuetifyTheme.global.name.value = theme
+      vuetifyTheme.global.name.value = vuetifyThemeName
     } catch {
       // Vuetify noch nicht verfuegbar (wird spaeter in App.vue gesetzt)
     }
   }
 
-  async function updateTheme(themeName) {
+  async function updatePreferences(themeName = null, darkMode = null) {
     try {
-      const response = await api.patch('/api/auth/me/preferences', {
-        theme: themeName,
-      })
+      const payload = {}
+      if (themeName !== null) payload.theme = themeName
+      if (darkMode !== null) payload.dark_mode = darkMode
 
-      applyTheme(response.data.theme)
+      const response = await api.patch('/api/auth/me/preferences', payload)
+
+      applyTheme(response.data.theme, response.data.dark_mode)
 
       // User-Objekt aktualisieren
       if (user.value) {
@@ -91,9 +125,14 @@ export const useAuthStore = defineStore('auth', () => {
 
       return response.data
     } catch (error) {
-      console.error('Fehler beim Speichern des Themes:', error)
+      console.error('Fehler beim Speichern der Einstellungen:', error)
       throw error
     }
+  }
+
+  // Legacy-Funktion fuer Rueckwaertskompatibilitaet
+  async function updateTheme(themeName) {
+    return updatePreferences(themeName, null)
   }
 
   async function fetchAccessSummary() {
@@ -153,6 +192,7 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     accessSummary,
     currentTheme,
+    currentDarkMode,
     // Getters
     isAuthenticated,
     isSuperAdmin,
@@ -160,6 +200,7 @@ export const useAuthStore = defineStore('auth', () => {
     canManageSettings,
     accessibleGroups,
     accessiblePlaybooks,
+    systemPrefersDark,
     // Actions
     login,
     logout,
@@ -171,5 +212,6 @@ export const useAuthStore = defineStore('auth', () => {
     canAccessPlaybook,
     applyTheme,
     updateTheme,
+    updatePreferences,
   }
 })

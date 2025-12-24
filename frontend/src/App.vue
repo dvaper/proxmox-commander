@@ -229,10 +229,23 @@ const theme = useTheme()
 
 const drawer = ref(true)
 
-// Theme bei Aenderung anwenden
-watch(() => authStore.currentTheme, (newTheme) => {
-  if (newTheme && theme.global.name.value !== newTheme) {
-    theme.global.name.value = newTheme
+// Theme bei Aenderung anwenden (kombiniert Farbschema + Dark Mode)
+watch([() => authStore.currentTheme, () => authStore.currentDarkMode], ([newTheme, newDarkMode]) => {
+  if (!newTheme) return
+
+  // Dark Mode bestimmen
+  let isDark = true
+  if (newDarkMode === 'light') {
+    isDark = false
+  } else if (newDarkMode === 'system') {
+    isDark = authStore.systemPrefersDark
+  }
+
+  // Vuetify Theme-Name zusammensetzen
+  const vuetifyThemeName = newTheme + (isDark ? 'Dark' : 'Light')
+
+  if (theme.global.name.value !== vuetifyThemeName) {
+    theme.global.name.value = vuetifyThemeName
   }
 }, { immediate: true })
 const profileDialog = ref(null)

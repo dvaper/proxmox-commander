@@ -77,7 +77,7 @@
             <v-divider class="my-4"></v-divider>
             <div class="text-subtitle-1 mb-3">
               <v-icon start>mdi-palette</v-icon>
-              Farbtheme
+              Farbschema
             </div>
             <div class="d-flex flex-wrap ga-2">
               <v-btn
@@ -86,15 +86,35 @@
                 :color="theme.color"
                 :variant="authStore.currentTheme === theme.name ? 'elevated' : 'outlined'"
                 size="small"
-                :loading="savingTheme && selectedTheme === theme.name"
+                :loading="savingPrefs && selectedTheme === theme.name"
                 @click="selectTheme(theme.name)"
               >
                 <v-icon v-if="authStore.currentTheme === theme.name" start size="small">mdi-check</v-icon>
                 {{ theme.label }}
               </v-btn>
             </div>
+
+            <!-- Dark Mode Auswahl -->
+            <div class="text-subtitle-1 mb-3 mt-5">
+              <v-icon start>mdi-theme-light-dark</v-icon>
+              Erscheinungsbild
+            </div>
+            <div class="d-flex flex-wrap ga-2">
+              <v-btn
+                v-for="mode in darkModes"
+                :key="mode.value"
+                :variant="authStore.currentDarkMode === mode.value ? 'elevated' : 'outlined'"
+                :color="authStore.currentDarkMode === mode.value ? 'primary' : undefined"
+                size="small"
+                :loading="savingPrefs && selectedDarkMode === mode.value"
+                @click="selectDarkMode(mode.value)"
+              >
+                <v-icon start size="small">{{ mode.icon }}</v-icon>
+                {{ mode.label }}
+              </v-btn>
+            </div>
             <div class="text-caption text-grey mt-2">
-              Das Theme wird sofort angewendet und gespeichert.
+              Einstellungen werden sofort angewendet und gespeichert.
             </div>
           </v-window-item>
 
@@ -235,8 +255,9 @@ const dialog = ref(false)
 const tab = ref('profile')
 const passwordForm = ref(null)
 const saving = ref(false)
-const savingTheme = ref(false)
+const savingPrefs = ref(false)
 const selectedTheme = ref('')
+const selectedDarkMode = ref('')
 
 // Verfuegbare Themes
 const themes = [
@@ -245,6 +266,13 @@ const themes = [
   { name: 'green', label: 'Gruen', color: '#4CAF50' },
   { name: 'purple', label: 'Lila', color: '#9C27B0' },
   { name: 'teal', label: 'Teal', color: '#009688' },
+]
+
+// Dark Mode Optionen
+const darkModes = [
+  { value: 'system', label: 'System', icon: 'mdi-laptop' },
+  { value: 'light', label: 'Hell', icon: 'mdi-white-balance-sunny' },
+  { value: 'dark', label: 'Dunkel', icon: 'mdi-weather-night' },
 ]
 
 const passwordData = ref({
@@ -257,16 +285,32 @@ const passwordData = ref({
 async function selectTheme(themeName) {
   if (authStore.currentTheme === themeName) return
 
-  savingTheme.value = true
+  savingPrefs.value = true
   selectedTheme.value = themeName
   try {
-    await authStore.updateTheme(themeName)
-    showSnackbar('Theme gespeichert')
+    await authStore.updatePreferences(themeName, null)
+    showSnackbar('Farbschema gespeichert')
   } catch (e) {
-    showSnackbar('Fehler beim Speichern des Themes', 'error')
+    showSnackbar('Fehler beim Speichern', 'error')
   } finally {
-    savingTheme.value = false
+    savingPrefs.value = false
     selectedTheme.value = ''
+  }
+}
+
+async function selectDarkMode(mode) {
+  if (authStore.currentDarkMode === mode) return
+
+  savingPrefs.value = true
+  selectedDarkMode.value = mode
+  try {
+    await authStore.updatePreferences(null, mode)
+    showSnackbar('Erscheinungsbild gespeichert')
+  } catch (e) {
+    showSnackbar('Fehler beim Speichern', 'error')
+  } finally {
+    savingPrefs.value = false
+    selectedDarkMode.value = ''
   }
 }
 

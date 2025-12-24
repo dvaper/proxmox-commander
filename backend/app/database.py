@@ -87,6 +87,15 @@ async def run_migrations():
             except Exception as e:
                 logger.debug(f"Migration theme fehlgeschlagen: {e}")
 
+        # Migration: dark_mode Spalte zu users hinzufügen (v0.2.22)
+        if "dark_mode" not in columns:
+            try:
+                logger.info("Migration: Füge dark_mode Spalte zu users hinzu...")
+                await conn.execute(text("ALTER TABLE users ADD COLUMN dark_mode VARCHAR(10) DEFAULT 'dark' NOT NULL"))
+                logger.info("Migration erfolgreich: dark_mode hinzugefügt")
+            except Exception as e:
+                logger.debug(f"Migration dark_mode fehlgeschlagen: {e}")
+
 
 async def create_default_admin():
     """Erstellt oder aktualisiert den Admin-User basierend auf Settings (fuer App-Start)"""

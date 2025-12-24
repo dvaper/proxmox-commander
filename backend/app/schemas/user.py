@@ -203,15 +203,20 @@ class DefaultAccessSettings(BaseModel):
 
 # ============== User Preferences Schemas ==============
 
-# Verfuegbare Theme-Namen
+# Verfuegbare Theme-Namen (Farbschema)
 ThemeName = Literal["blue", "orange", "green", "purple", "teal"]
+
+# Dark Mode Optionen
+DarkMode = Literal["system", "light", "dark"]
 
 
 class UserPreferencesUpdate(BaseModel):
     """Schema für User-Einstellungen Update"""
     theme: Optional[ThemeName] = None
+    dark_mode: Optional[DarkMode] = None
 
 
 class UserPreferencesResponse(BaseModel):
     """Schema für User-Einstellungen Response"""
     theme: str
+    dark_mode: str = "dark"

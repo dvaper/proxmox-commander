@@ -26,7 +26,8 @@ class User(Base):
     netbox_user_id = Column(Integer, nullable=True)  # Referenz auf NetBox User ID
 
     # Benutzer-Einstellungen
-    theme = Column(String(20), default="blue", nullable=False)  # UI-Theme (blue, orange, green, purple, teal)
+    theme = Column(String(20), default="blue", nullable=False)  # Farbschema (blue, orange, green, purple, teal)
+    dark_mode = Column(String(10), default="dark", nullable=False)  # Modus (system, light, dark)
 
     # Zeitstempel
     created_at = Column(DateTime(timezone=True), server_default=func.now())
