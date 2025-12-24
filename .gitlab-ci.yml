@@ -46,6 +46,9 @@ update-version:
     - until docker info; do sleep 2; done
     # Cleanup um Speicherplatz in dind freizugeben
     - docker system prune -af --volumes || true
+    # Docker Hub Login (Rate Limit erhoehen)
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin || true
+    # GitLab Registry Login
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $REGISTRY
 
 build-dpc-api:
