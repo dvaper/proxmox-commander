@@ -1,5 +1,15 @@
 [
   {
+    "version": "v0.2.23",
+    "date": "2025-12-24",
+    "changes": {
+      "Bugfixes": [
+        "NetBox: VLAN-Import zeigt automatisch gescannte VLANs beim Laden",
+        "NetBox: Tab-Wechsel nur wenn keine neuen VLANs vorhanden"
+      ]
+    }
+  },
+  {
     "version": "v0.2.22",
     "date": "2025-12-24",
     "changes": {

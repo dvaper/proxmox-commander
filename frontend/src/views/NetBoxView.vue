@@ -664,11 +664,16 @@ async function importVlans() {
 
 // Beim Laden der Komponente
 onMounted(async () => {
-  await loadVlans()
-  await loadPrefixes()
+  // Parallel laden fuer bessere Performance
+  await Promise.all([
+    loadVlans(),
+    loadPrefixes(),
+    scanProxmox()  // Automatisch Proxmox scannen
+  ])
 
-  // Wenn bereits VLANs vorhanden, zeige Netzwerke-Tab
-  if (vlans.value.length > 0) {
+  // Wenn bereits VLANs in NetBox vorhanden UND keine neuen VLANs in Proxmox,
+  // zeige Netzwerke-Tab (sonst bleibt Import-Tab offen fuer neue VLANs)
+  if (vlans.value.length > 0 && newVlansCount.value === 0) {
     activeTab.value = 'networks'
   }
 })
