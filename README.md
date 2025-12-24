@@ -289,7 +289,7 @@ flowchart TB
         end
 
         subgraph NetBoxStack["NetBox Stack"]
-            netbox["NetBox\n:8081"]
+            netbox["NetBox\n:8081 + /netbox/"]
             postgres[(PostgreSQL)]
             redis[(Redis)]
         end
@@ -302,7 +302,8 @@ flowchart TB
         vms["VMs &\nTargets"]
     end
 
-    nginx --> fastapi
+    nginx -->|"/api/*"| fastapi
+    nginx -->|"/netbox/*"| netbox
     fastapi --> sqlite
     fastapi --> netbox
     netbox --> postgres
