@@ -1,5 +1,5 @@
-# Build Stage
-FROM node:20-alpine AS build
+# Build Stage - Base Image aus lokaler GitLab Registry
+FROM registry.newsxc.net/darthvaper/docker-proxmox-commander/node:20-alpine AS build
 
 WORKDIR /app
 
@@ -11,8 +11,8 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Production Stage
-FROM nginx:alpine
+# Production Stage - Base Image aus lokaler GitLab Registry
+FROM registry.newsxc.net/darthvaper/docker-proxmox-commander/nginx:alpine
 
 # Nginx Config
 COPY nginx.conf /etc/nginx/conf.d/default.conf

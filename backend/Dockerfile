@@ -1,4 +1,5 @@
-FROM python:3.11-slim
+# Base Image aus lokaler GitLab Registry (gespiegelt von Docker Hub)
+FROM registry.newsxc.net/darthvaper/docker-proxmox-commander/python:3.11-slim
 
 WORKDIR /app
 
