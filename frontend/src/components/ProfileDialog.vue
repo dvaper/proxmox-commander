@@ -114,6 +114,26 @@
                 {{ mode.label }}
               </v-btn>
             </div>
+
+            <!-- Sidebar Logo Auswahl -->
+            <div class="text-subtitle-1 mb-3 mt-5">
+              <v-icon start>mdi-image-size-select-large</v-icon>
+              Sidebar-Logo
+            </div>
+            <div class="d-flex flex-wrap ga-2">
+              <v-btn
+                v-for="logo in sidebarLogos"
+                :key="logo.value"
+                :variant="authStore.currentSidebarLogo === logo.value ? 'elevated' : 'outlined'"
+                :color="authStore.currentSidebarLogo === logo.value ? 'primary' : undefined"
+                size="small"
+                :loading="savingPrefs && selectedSidebarLogo === logo.value"
+                @click="selectSidebarLogo(logo.value)"
+              >
+                <v-icon start size="small">{{ logo.icon }}</v-icon>
+                {{ logo.label }}
+              </v-btn>
+            </div>
             <div class="text-caption text-grey mt-2">
               Einstellungen werden sofort angewendet und gespeichert.
             </div>
@@ -366,6 +386,7 @@ const saving = ref(false)
 const savingPrefs = ref(false)
 const selectedTheme = ref('')
 const selectedDarkMode = ref('')
+const selectedSidebarLogo = ref('')
 
 // Benachrichtigungspraeferenzen
 const loadingNotifPrefs = ref(false)
@@ -435,6 +456,12 @@ const darkModes = [
   { value: 'dark', label: 'Dunkel', icon: 'mdi-weather-night' },
 ]
 
+// Sidebar Logo Optionen
+const sidebarLogos = [
+  { value: 'icon', label: 'Icon', icon: 'mdi-image-size-select-small' },
+  { value: 'banner', label: 'Banner', icon: 'mdi-image-size-select-large' },
+]
+
 const passwordData = ref({
   currentPassword: '',
   newPassword: '',
@@ -471,6 +498,22 @@ async function selectDarkMode(mode) {
   } finally {
     savingPrefs.value = false
     selectedDarkMode.value = ''
+  }
+}
+
+async function selectSidebarLogo(logoVariant) {
+  if (authStore.currentSidebarLogo === logoVariant) return
+
+  savingPrefs.value = true
+  selectedSidebarLogo.value = logoVariant
+  try {
+    await authStore.updatePreferences(null, null, logoVariant)
+    showSnackbar('Sidebar-Logo gespeichert')
+  } catch (e) {
+    showSnackbar('Fehler beim Speichern', 'error')
+  } finally {
+    savingPrefs.value = false
+    selectedSidebarLogo.value = ''
   }
 }
 

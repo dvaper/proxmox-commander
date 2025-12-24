@@ -214,6 +214,7 @@ async def get_my_preferences(current_user: User = Depends(get_current_active_use
     return UserPreferencesResponse(
         theme=current_user.theme or "blue",
         dark_mode=getattr(current_user, 'dark_mode', None) or "dark",
+        sidebar_logo=getattr(current_user, 'sidebar_logo', None) or "icon",
     )
 
 
@@ -226,7 +227,7 @@ async def update_my_preferences(
     """
     Benutzer-Einstellungen aktualisieren.
 
-    Ermoeglicht das Aendern des Farbschemas und Dark-Mode.
+    Ermoeglicht das Aendern des Farbschemas, Dark-Mode und Sidebar-Logo.
     """
     if preferences.theme is not None:
         current_user.theme = preferences.theme
@@ -234,10 +235,14 @@ async def update_my_preferences(
     if preferences.dark_mode is not None:
         current_user.dark_mode = preferences.dark_mode
 
+    if preferences.sidebar_logo is not None:
+        current_user.sidebar_logo = preferences.sidebar_logo
+
     await db.commit()
     await db.refresh(current_user)
 
     return UserPreferencesResponse(
         theme=current_user.theme or "blue",
         dark_mode=getattr(current_user, 'dark_mode', None) or "dark",
+        sidebar_logo=getattr(current_user, 'sidebar_logo', None) or "icon",
     )

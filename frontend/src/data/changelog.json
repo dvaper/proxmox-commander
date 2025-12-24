@@ -1,5 +1,15 @@
 [
   {
+    "version": "v0.2.34",
+    "date": "2025-12-24",
+    "changes": {
+      "Features": [
+        "Sidebar: Waehlbare Logo-Variante (Icon oder Banner)",
+        "Profil: Einstellung fuer Sidebar-Logo unter 'Mein Profil'"
+      ]
+    }
+  },
+  {
     "version": "v0.2.32",
     "date": "2025-12-24",
     "changes": {

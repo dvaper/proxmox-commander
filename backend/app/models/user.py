@@ -28,6 +28,7 @@ class User(Base):
     # Benutzer-Einstellungen
     theme = Column(String(20), default="blue", nullable=False)  # Farbschema (blue, orange, green, purple, teal)
     dark_mode = Column(String(10), default="dark", nullable=False)  # Modus (system, light, dark)
+    sidebar_logo = Column(String(10), default="icon", nullable=False)  # Logo-Variante (icon, banner)
 
     # Zeitstempel
     created_at = Column(DateTime(timezone=True), server_default=func.now())

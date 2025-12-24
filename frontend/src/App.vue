@@ -2,7 +2,8 @@
   <v-app>
     <!-- Navigation (nur wenn eingeloggt und nicht im Setup) -->
     <v-navigation-drawer v-if="authStore.isAuthenticated && !isSetupRoute" v-model="drawer" app>
-      <v-list-item>
+      <!-- Sidebar Header: Icon oder Banner Variante -->
+      <v-list-item v-if="authStore.currentSidebarLogo === 'icon'">
         <template v-slot:prepend>
           <AppLogo variant="icon" size="md" class="mr-3" />
         </template>
@@ -21,6 +22,23 @@
           </v-btn>
         </v-list-item-subtitle>
       </v-list-item>
+
+      <div v-else class="sidebar-banner-header">
+        <AppLogo variant="banner" size="xs" class="sidebar-banner-logo" />
+        <div class="sidebar-banner-version">
+          v{{ appVersion }}
+          <v-btn
+            icon
+            variant="text"
+            size="x-small"
+            class="ml-1"
+            @click.stop="showChangelog = true"
+          >
+            <v-icon size="14">mdi-information-outline</v-icon>
+            <v-tooltip activator="parent" location="right">Changelog anzeigen</v-tooltip>
+          </v-btn>
+        </div>
+      </div>
 
       <v-divider></v-divider>
 
@@ -376,5 +394,25 @@ const logout = () => {
 <style>
 html {
   overflow-y: auto !important;
+}
+
+/* Sidebar Banner Header Styles */
+.sidebar-banner-header {
+  padding: 12px 16px;
+  text-align: center;
+}
+
+.sidebar-banner-logo {
+  max-width: 100%;
+  height: auto;
+}
+
+.sidebar-banner-version {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: rgba(var(--v-theme-on-surface), 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

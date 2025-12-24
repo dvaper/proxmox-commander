@@ -209,14 +209,19 @@ ThemeName = Literal["blue", "orange", "green", "purple", "teal"]
 # Dark Mode Optionen
 DarkMode = Literal["system", "light", "dark"]
 
+# Sidebar Logo Varianten
+SidebarLogo = Literal["icon", "banner"]
+
 
 class UserPreferencesUpdate(BaseModel):
     """Schema für User-Einstellungen Update"""
     theme: Optional[ThemeName] = None
     dark_mode: Optional[DarkMode] = None
+    sidebar_logo: Optional[SidebarLogo] = None
 
 
 class UserPreferencesResponse(BaseModel):
     """Schema für User-Einstellungen Response"""
     theme: str
     dark_mode: str = "dark"
+    sidebar_logo: str = "icon"

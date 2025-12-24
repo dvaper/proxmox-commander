@@ -13,6 +13,7 @@ export const useAuthStore = defineStore('auth', () => {
   const accessSummary = ref(null)
   const currentTheme = ref(localStorage.getItem('theme') || 'blue')
   const currentDarkMode = ref(localStorage.getItem('darkMode') || 'dark')
+  const currentSidebarLogo = ref(localStorage.getItem('sidebarLogo') || 'icon')
 
   // Getters
   const isAuthenticated = computed(() => !!token.value)
@@ -60,6 +61,7 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const prefsResponse = await api.get('/api/auth/me/preferences')
         applyTheme(prefsResponse.data.theme, prefsResponse.data.dark_mode)
+        applySidebarLogo(prefsResponse.data.sidebar_logo)
       } catch {
         // Fallback auf User-Theme
         if (response.data.theme) {
@@ -108,15 +110,24 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function updatePreferences(themeName = null, darkMode = null) {
+  function applySidebarLogo(logoVariant) {
+    const validVariants = ['icon', 'banner']
+    const variant = validVariants.includes(logoVariant) ? logoVariant : 'icon'
+    currentSidebarLogo.value = variant
+    localStorage.setItem('sidebarLogo', variant)
+  }
+
+  async function updatePreferences(themeName = null, darkMode = null, sidebarLogo = null) {
     try {
       const payload = {}
       if (themeName !== null) payload.theme = themeName
       if (darkMode !== null) payload.dark_mode = darkMode
+      if (sidebarLogo !== null) payload.sidebar_logo = sidebarLogo
 
       const response = await api.patch('/api/auth/me/preferences', payload)
 
       applyTheme(response.data.theme, response.data.dark_mode)
+      applySidebarLogo(response.data.sidebar_logo)
 
       // User-Objekt aktualisieren
       if (user.value) {
@@ -193,6 +204,7 @@ export const useAuthStore = defineStore('auth', () => {
     accessSummary,
     currentTheme,
     currentDarkMode,
+    currentSidebarLogo,
     // Getters
     isAuthenticated,
     isSuperAdmin,
@@ -211,6 +223,7 @@ export const useAuthStore = defineStore('auth', () => {
     canAccessGroup,
     canAccessPlaybook,
     applyTheme,
+    applySidebarLogo,
     updateTheme,
     updatePreferences,
   }
