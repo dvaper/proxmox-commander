@@ -83,3 +83,7 @@ async def get_current_super_admin_user(
             detail="Super-Admin-Berechtigung erforderlich",
         )
     return current_user
+
+
+# Alias fuer kuerzere Imports
+get_current_super_admin = get_current_super_admin_user
