@@ -23,3 +23,181 @@
 - [ ] **Hardcoded IPs entfernen**: `cloud_init_service.py` enthaelt hardcoded Proxmox Node IPs und Phone-Home URL
 - [ ] **SSH Public Keys konfigurierbar machen**: Aktuell hardcoded in `cloud_init_service.py`
 - [ ] **JWT Secret Validierung**: Warnung/Fehler wenn Default "change-me-in-production" verwendet wird
+
+---
+
+# Feature-Implementierung aus Referenzprojekt (Ansible Commander)
+
+Dieses Dokument listet Features aus dem Referenzprojekt auf, die im Proxmox Commander noch nicht implementiert sind.
+
+**Wichtige Designprinzipien:**
+- Proxmox Commander wird als Docker-Image bereitgestellt
+- Generischer Ansatz fuer unbekannte Zielumgebungen
+- Keine Abhaengigkeiten zu spezifischer Infrastruktur (NAS-Pfade, etc.)
+- Konfiguration ueber Umgebungsvariablen und Setup-Wizard
+
+---
+
+## Prioritaet 1: Kritische Fixes
+
+### 1.1 VM-Loeschung robuster gestalten
+**Status:** Code vorhanden, muss getestet werden
+
+Die `delete_vm_complete()` Methode existiert bereits und sollte:
+- [x] VM in Proxmox stoppen vor Loeschung
+- [x] NetBox VM-Eintrag loeschen
+- [x] NetBox IP freigeben
+- [x] Terraform State bereinigen
+- [x] TF-Datei loeschen
+- [x] Ansible Inventory bereinigen
+- [ ] Cloud-Init Snippet loeschen (NAS-unabhaengig machen)
+
+**Aktion:** Testen ob alle Schritte korrekt funktionieren
+
+---
+
+## Prioritaet 2: Sinnvolle Erweiterungen
+
+### 2.1 Git Sync Service (Optional)
+**Referenz:** `ansible-commander/backend/app/services/git_sync_service.py`
+
+Ermoeglicht Repository-Synchronisation fuer Infrastructure-as-Code Workflows.
+
+**Features:**
+- Git pull beim Container-Start
+- Manueller Sync via API (`POST /api/git/sync`)
+- Status-Abfrage (`GET /api/git/status`)
+- Commit-Historie (`GET /api/git/commits`)
+
+**Implementierungsaufwand:** Mittel (ca. 300 Zeilen Backend + Frontend UI)
+
+**Generischer Nutzen:** Hoch - Ermoeglicht GitOps-Workflow fuer TF-Dateien und Playbooks
+
+**Besonderheiten fuer Docker:**
+- Repository muss als Volume gemountet werden (`/repo`)
+- Git muss im Container verfuegbar sein
+- SSH-Keys fuer private Repos benoetigt
+
+```yaml
+# docker-compose.yml Beispiel
+volumes:
+  - ./my-infrastructure:/repo:rw
+  - ~/.ssh:/root/.ssh:ro  # Fuer private Repos
+```
+
+---
+
+### 2.2 Erweiterte Playbook-Verwaltung
+**Referenz:** `ansible-commander/backend/app/services/playbook_editor.py`
+
+Der Ansible Commander hat erweiterte Features:
+- Playbook-Vorlagen mit Kategorien
+- Syntax-Validierung vor Speicherung
+- Git-Integration (Commit nach Aenderung)
+
+**Im Proxmox Commander bereits vorhanden:**
+- Basis Playbook Editor
+- Playbook Execution mit WebSocket Output
+- Playbook Scanner
+
+**Fehlend:**
+- [ ] Playbook-Vorlagen-System mit Kategorien
+- [ ] Automatische Git-Commits nach Aenderungen (wenn Git Sync aktiviert)
+
+---
+
+### 2.3 Inventory Sync Service Erweiterungen
+**Referenz:** `ansible-commander/backend/app/services/inventory_sync_service.py`
+
+**Features im Ansible Commander:**
+- Background-Sync mit Proxmox
+- Automatische Host-Erkennung
+- Sync-Intervall konfigurierbar
+
+**Im Proxmox Commander vorhanden:** Basis-Sync
+
+**Fehlend:**
+- [ ] Konfigurierbares Sync-Intervall ueber UI
+- [ ] Background-Sync als optionaler Hintergrund-Task
+
+---
+
+## Prioritaet 3: Nice-to-Have
+
+### 3.1 Settings Service Erweiterungen
+**Referenz:** `ansible-commander/backend/app/services/settings_service.py`
+
+Erweiterte Einstellungsverwaltung:
+- Runtime-Konfiguration aendern
+- Settings in Datenbank persistieren
+- Hot-Reload ohne Container-Neustart
+
+**Aktuell:** Settings werden ueber .env und Umgebungsvariablen verwaltet
+
+---
+
+### 3.2 Permission Service Erweiterungen
+**Referenz:** `ansible-commander/backend/app/services/permission_service.py`
+
+Granulare Berechtigungen:
+- Rollen-basierte Zugriffskontrolle
+- Permissions pro Ressource (VM, Playbook, etc.)
+
+**Aktuell:** Einfache Admin/User Unterscheidung
+
+---
+
+## Nicht uebernehmen
+
+Diese Features aus dem Ansible Commander sind **nicht sinnvoll** fuer Proxmox Commander:
+
+### VLAN Config (hardcodiert)
+**Datei:** `ansible-commander/backend/app/services/vlan_config.py`
+
+Hardcodierte VLAN-Konfiguration. Proxmox Commander laedt VLANs **dynamisch aus NetBox** - das ist der bessere Ansatz fuer einen generischen Container.
+
+---
+
+## Architektur-Unterschiede
+
+| Aspekt | Ansible Commander | Proxmox Commander |
+|--------|-------------------|-------------------|
+| VLAN-Verwaltung | Hardcodiert in `vlan_config.py` | Dynamisch aus NetBox |
+| Setup | Manuelle .env Konfiguration | Setup-Wizard UI |
+| NetBox | Optional | Integriert (eigener Container) |
+| Deployment | Direkt auf VM | Docker Compose |
+| Git-Sync | Vorhanden | Fehlt (TODO) |
+| Terraform Provider | bpg/proxmox | bpg/proxmox |
+
+---
+
+## Implementierungs-Reihenfolge
+
+1. **VM-Loeschung testen** - Kritisch, bereits implementiert
+2. **Git Sync Service** - Wertvoll fuer GitOps Workflows
+3. **Playbook-Vorlagen** - Verbessert UX
+4. **Background Inventory Sync** - Automatisierung
+
+---
+
+## Notizen zur Docker-Kompatibilitaet
+
+Bei der Implementierung neuer Features beachten:
+
+1. **Keine absoluten Pfade** - Alles relativ zu gemounteten Volumes
+2. **Umgebungsvariablen** - Konfiguration ueber ENV, nicht Dateien
+3. **Graceful Degradation** - Features muessen optional sein
+4. **Health Checks** - Neue Services in Health-Endpoint einbinden
+5. **Logging** - Strukturiertes Logging fuer Container-Umgebung
+
+```python
+# Beispiel: Pfad-Handling fuer Docker
+import os
+from pathlib import Path
+
+# Gut: Umgebungsvariable mit Fallback
+REPO_PATH = Path(os.getenv("GIT_REPO_PATH", "/repo"))
+
+# Schlecht: Hardcodierter Pfad
+REPO_PATH = Path("/home/user/infrastructure")  # Funktioniert nicht im Container
+```
