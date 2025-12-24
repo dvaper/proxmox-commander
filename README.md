@@ -1,6 +1,20 @@
-# Proxmox Commander
+<p align="center">
+  <img src="docs/logo-banner.svg" alt="Proxmox Commander" width="600">
+</p>
 
-VM-Management-Plattform fuer Proxmox VE mit integriertem NetBox (IPAM/DCIM), Ansible und Terraform.
+<p align="center">
+  <strong>VM-Management-Plattform fuer Proxmox VE</strong><br>
+  mit integriertem NetBox (IPAM/DCIM), Ansible und Terraform
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Proxmox%20VE-8.x%20|%209.x-E57000?style=flat-square&logo=proxmox&logoColor=white" alt="Proxmox VE">
+  <img src="https://img.shields.io/badge/Docker-24.x+-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/NetBox-IPAM%2FDCIM-0088CC?style=flat-square" alt="NetBox">
+  <img src="https://img.shields.io/badge/Terraform-bpg%2Fproxmox-844FBA?style=flat-square&logo=terraform&logoColor=white" alt="Terraform">
+</p>
+
+---
 
 ## Features
 
