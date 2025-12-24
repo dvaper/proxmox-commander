@@ -91,36 +91,7 @@ Es sollte zusaetzlich ein **VM-Objekt** unter "Virtualization > Virtual Machines
 
 ## Prioritaet 2: Sinnvolle Erweiterungen
 
-### 2.1 Git Sync Service (Optional)
-**Referenz:** `ansible-commander/backend/app/services/git_sync_service.py`
-
-Ermoeglicht Repository-Synchronisation fuer Infrastructure-as-Code Workflows.
-
-**Features:**
-- Git pull beim Container-Start
-- Manueller Sync via API (`POST /api/git/sync`)
-- Status-Abfrage (`GET /api/git/status`)
-- Commit-Historie (`GET /api/git/commits`)
-
-**Implementierungsaufwand:** Mittel (ca. 300 Zeilen Backend + Frontend UI)
-
-**Generischer Nutzen:** Hoch - Ermoeglicht GitOps-Workflow fuer TF-Dateien und Playbooks
-
-**Besonderheiten fuer Docker:**
-- Repository muss als Volume gemountet werden (`/repo`)
-- Git muss im Container verfuegbar sein
-- SSH-Keys fuer private Repos benoetigt
-
-```yaml
-# docker-compose.yml Beispiel
-volumes:
-  - ./my-infrastructure:/repo:rw
-  - ~/.ssh:/root/.ssh:ro  # Fuer private Repos
-```
-
----
-
-### 2.2 Erweiterte Playbook-Verwaltung
+### 2.1 Erweiterte Playbook-Verwaltung
 **Referenz:** `ansible-commander/backend/app/services/playbook_editor.py`
 
 Der Ansible Commander hat erweiterte Features:
@@ -135,11 +106,10 @@ Der Ansible Commander hat erweiterte Features:
 
 **Fehlend:**
 - [ ] Playbook-Vorlagen-System mit Kategorien
-- [ ] Automatische Git-Commits nach Aenderungen (wenn Git Sync aktiviert)
 
 ---
 
-### 2.3 Inventory Sync Service Erweiterungen
+### 2.2 Inventory Sync Service Erweiterungen
 **Referenz:** `ansible-commander/backend/app/services/inventory_sync_service.py`
 
 **Features im Ansible Commander:**
@@ -157,7 +127,32 @@ Der Ansible Commander hat erweiterte Features:
 
 ## Prioritaet 3: Nice-to-Have
 
-### 3.1 Settings Service Erweiterungen
+### 3.1 Git Sync Service
+**Referenz:** `ansible-commander/backend/app/services/git_sync_service.py`
+
+**Bewertung:** Niedriger Mehrwert fuer hohen Aufwand.
+
+Da `./data/` bereits als Bind Mount existiert, kann der Benutzer seine Daten
+**selbst** versionieren ohne integrierten Git Sync:
+
+```bash
+cd proxmox-commander/data
+git init
+git remote add origin git@gitlab.example.com:user/my-infra.git
+git add . && git commit -m "Initial" && git push
+```
+
+**Zusaetzliche Konfiguration fuer Benutzer waere:**
+- Git-Repository erstellen
+- SSH-Key generieren und im Container verfuegbar machen
+- docker-compose.yml anpassen (Volume-Mount)
+- Known Hosts konfigurieren
+
+**Fazit:** Aufwand/Nutzen-Verhaeltnis fragwuerdig fuer generischen Docker-Container.
+
+---
+
+### 3.2 Settings Service Erweiterungen
 **Referenz:** `ansible-commander/backend/app/services/settings_service.py`
 
 Erweiterte Einstellungsverwaltung:
@@ -169,7 +164,7 @@ Erweiterte Einstellungsverwaltung:
 
 ---
 
-### 3.2 Permission Service Erweiterungen
+### 3.3 Permission Service Erweiterungen
 **Referenz:** `ansible-commander/backend/app/services/permission_service.py`
 
 Granulare Berechtigungen:
@@ -199,15 +194,15 @@ Hardcodierte VLAN-Konfiguration. Proxmox Commander laedt VLANs **dynamisch aus N
 | Setup | Manuelle .env Konfiguration | Setup-Wizard UI |
 | NetBox | Optional | Integriert (eigener Container) |
 | Deployment | Direkt auf VM | Docker Compose |
-| Git-Sync | Vorhanden | Fehlt (TODO) |
+| Git-Sync | Integriert | Nicht noetig (./data/ ist Bind Mount) |
 | Terraform Provider | bpg/proxmox | bpg/proxmox |
 
 ---
 
 ## Implementierungs-Reihenfolge
 
-1. **VM-Loeschung testen** - Kritisch, bereits implementiert
-2. **Git Sync Service** - Wertvoll fuer GitOps Workflows
+1. ~~**VM-Loeschung testen**~~ - ✅ Erledigt (2025-12-24)
+2. **NetBox VM-Objekt beim Deployment** - Vollstaendige DCIM-Integration
 3. **Playbook-Vorlagen** - Verbessert UX
 4. **Background Inventory Sync** - Automatisierung
 
