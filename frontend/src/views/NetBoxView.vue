@@ -213,11 +213,6 @@
         <!-- Tab 2: Netzwerke (VLANs + Prefixes) -->
         <v-window-item value="networks">
           <v-card-text>
-            <v-alert type="info" variant="tonal" class="mb-4" density="compact">
-              <v-icon start size="small">mdi-information</v-icon>
-              Uebersicht aller VLANs und Prefixes aus NetBox.
-            </v-alert>
-
             <!-- Empty State wenn weder VLANs noch Prefixes vorhanden -->
             <v-alert
               v-if="vlans.length === 0 && prefixes.length === 0 && !loadingVlans && !loadingPrefixes"
@@ -238,85 +233,95 @@
               </div>
             </v-alert>
 
-            <!-- VLANs Tabelle -->
-            <v-data-table
-              v-if="vlans.length > 0 || loadingVlans"
-              :headers="vlanHeaders"
-              :items="vlans"
-              :loading="loadingVlans"
-              density="compact"
-              :items-per-page="15"
-            >
-              <template v-slot:top>
-                <v-toolbar flat density="compact">
-                  <v-toolbar-title class="text-body-1">VLANs</v-toolbar-title>
-                  <v-spacer></v-spacer>
-                  <v-btn icon variant="text" size="small" @click="loadVlans" :loading="loadingVlans">
-                    <v-icon size="small">mdi-refresh</v-icon>
-                  </v-btn>
-                </v-toolbar>
-              </template>
-
-              <template v-slot:item.id="{ item }">
-                <v-chip size="small" color="primary" variant="flat">
-                  {{ item.id }}
-                </v-chip>
-              </template>
-
-              <template v-slot:item.bridge="{ item }">
-                <code>{{ item.bridge }}</code>
-              </template>
-
-              <template v-slot:item.prefix="{ item }">
-                <code>{{ item.prefix || '-' }}</code>
-              </template>
-            </v-data-table>
-
-            <v-divider class="my-6"></v-divider>
-
-            <!-- Prefixes Tabelle -->
-            <v-data-table
-              :headers="prefixHeaders"
-              :items="prefixes"
-              :loading="loadingPrefixes"
-              density="compact"
-              :items-per-page="15"
-            >
-              <template v-slot:top>
-                <v-toolbar flat density="compact">
-                  <v-toolbar-title class="text-body-1">Prefixes</v-toolbar-title>
-                  <v-spacer></v-spacer>
-                  <v-btn icon variant="text" size="small" @click="loadPrefixes" :loading="loadingPrefixes">
-                    <v-icon size="small">mdi-refresh</v-icon>
-                  </v-btn>
-                </v-toolbar>
-              </template>
-
-              <template v-slot:item.prefix="{ item }">
-                <code>{{ item.prefix }}</code>
-              </template>
-
-              <template v-slot:item.vlan="{ item }">
-                <v-chip v-if="item.vlan" size="small" color="primary" variant="outlined">
-                  VLAN {{ item.vlan }}
-                </v-chip>
-                <span v-else class="text-grey">-</span>
-              </template>
-
-              <template v-slot:item.utilization="{ item }">
-                <div class="d-flex align-center" style="min-width: 120px">
-                  <v-progress-linear
-                    :model-value="item.utilization || 0"
-                    height="8"
-                    rounded
-                    :color="item.utilization > 80 ? 'error' : item.utilization > 50 ? 'warning' : 'success'"
-                    class="mr-2"
+            <!-- Zwei-Spalten-Layout: VLANs links, Prefixes rechts -->
+            <v-row v-if="vlans.length > 0 || prefixes.length > 0 || loadingVlans || loadingPrefixes">
+              <!-- VLANs (aus Proxmox importiert) -->
+              <v-col cols="12" lg="6">
+                <v-card variant="outlined" class="h-100">
+                  <v-toolbar flat density="compact" color="transparent">
+                    <v-icon start color="primary">mdi-server-network</v-icon>
+                    <v-toolbar-title class="text-body-1 font-weight-medium">
+                      VLANs
+                      <span class="text-caption text-grey ml-1">(Proxmox)</span>
+                    </v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-chip size="x-small" variant="tonal" class="mr-2">{{ vlans.length }}</v-chip>
+                    <v-btn icon variant="text" size="small" @click="loadVlans" :loading="loadingVlans">
+                      <v-icon size="small">mdi-refresh</v-icon>
+                    </v-btn>
+                  </v-toolbar>
+                  <v-divider></v-divider>
+                  <v-data-table
+                    :headers="vlanHeadersCompact"
+                    :items="vlans"
+                    :loading="loadingVlans"
+                    density="compact"
+                    :items-per-page="10"
+                    :items-per-page-options="[10, 25, 50]"
                   >
-                  </v-progress-linear>
-                  <span class="text-caption">{{ item.utilization || 0 }}%</span>
-                </div>
-              </template>
-            </v-data-table>
+                    <template v-slot:item.id="{ item }">
+                      <v-chip size="x-small" color="primary" variant="flat">
+                        {{ item.id }}
+                      </v-chip>
+                    </template>
+                    <template v-slot:item.bridge="{ item }">
+                      <code class="text-caption">{{ item.bridge }}</code>
+                    </template>
+                  </v-data-table>
+                </v-card>
+              </v-col>
+
+              <!-- Prefixes (NetBox IPAM) -->
+              <v-col cols="12" lg="6">
+                <v-card variant="outlined" class="h-100">
+                  <v-toolbar flat density="compact" color="transparent">
+                    <v-icon start color="secondary">mdi-ip-network</v-icon>
+                    <v-toolbar-title class="text-body-1 font-weight-medium">
+                      Prefixes
+                      <span class="text-caption text-grey ml-1">(NetBox)</span>
+                    </v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-chip size="x-small" variant="tonal" class="mr-2">{{ prefixes.length }}</v-chip>
+                    <v-btn icon variant="text" size="small" @click="loadPrefixes" :loading="loadingPrefixes">
+                      <v-icon size="small">mdi-refresh</v-icon>
+                    </v-btn>
+                  </v-toolbar>
+                  <v-divider></v-divider>
+                  <v-data-table
+                    :headers="prefixHeadersCompact"
+                    :items="prefixes"
+                    :loading="loadingPrefixes"
+                    density="compact"
+                    :items-per-page="10"
+                    :items-per-page-options="[10, 25, 50]"
+                  >
+                    <template v-slot:item.prefix="{ item }">
+                      <code class="text-caption">{{ item.prefix }}</code>
+                    </template>
+                    <template v-slot:item.vlan="{ item }">
+                      <v-chip v-if="item.vlan" size="x-small" color="primary" variant="outlined">
+                        {{ item.vlan }}
+                      </v-chip>
+                      <span v-else class="text-grey">-</span>
+                    </template>
+                    <template v-slot:item.utilization="{ item }">
+                      <div class="d-flex align-center" style="min-width: 80px">
+                        <v-progress-linear
+                          :model-value="item.utilization || 0"
+                          height="6"
+                          rounded
+                          :color="item.utilization > 80 ? 'error' : item.utilization > 50 ? 'warning' : 'success'"
+                          class="mr-1"
+                          style="max-width: 50px"
+                        >
+                        </v-progress-linear>
+                        <span class="text-caption">{{ item.utilization || 0 }}%</span>
+                      </div>
+                    </template>
+                  </v-data-table>
+                </v-card>
+              </v-col>
+            </v-row>
 
             <!-- Hinweis zur IP-Synchronisation -->
             <v-alert
@@ -505,6 +510,12 @@ const vlanHeaders = [
   { title: 'Prefix', key: 'prefix' },
   { title: 'Bridge', key: 'bridge', width: '120px' },
 ]
+// Kompakte Header fuer Zwei-Spalten-Layout
+const vlanHeadersCompact = [
+  { title: 'ID', key: 'id', width: '60px' },
+  { title: 'Name', key: 'name' },
+  { title: 'Bridge', key: 'bridge', width: '100px' },
+]
 
 // Prefixes
 const prefixes = ref([])
@@ -514,6 +525,12 @@ const prefixHeaders = [
   { title: 'VLAN', key: 'vlan', width: '120px' },
   { title: 'Beschreibung', key: 'description' },
   { title: 'Auslastung', key: 'utilization', width: '180px' },
+]
+// Kompakte Header fuer Zwei-Spalten-Layout
+const prefixHeadersCompact = [
+  { title: 'Prefix', key: 'prefix' },
+  { title: 'VLAN', key: 'vlan', width: '70px' },
+  { title: 'Auslastung', key: 'utilization', width: '100px' },
 ]
 const prefixUtilizationHeaders = [
   { title: 'Prefix', key: 'prefix' },
