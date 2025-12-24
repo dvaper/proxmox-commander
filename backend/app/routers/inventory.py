@@ -589,3 +589,74 @@ async def get_sync_status(
 
     sync_service = get_sync_service()
     return sync_service.get_status()
+
+
+@router.post("/sync-background/start")
+async def start_background_sync(
+    current_user: User = Depends(require_super_admin),
+):
+    """
+    Startet den automatischen Background-Sync.
+
+    - Synchronisiert Proxmox VMs periodisch ins Inventory
+    - Intervall ist konfigurierbar
+    - Nur Super-Admin
+    """
+    from app.services.inventory_sync_service import get_sync_service
+
+    sync_service = get_sync_service()
+    await sync_service.start_background_sync()
+    return {
+        "success": True,
+        "message": f"Background-Sync gestartet (Intervall: {sync_service.sync_interval_seconds}s)",
+        "status": sync_service.get_status()
+    }
+
+
+@router.post("/sync-background/stop")
+async def stop_background_sync(
+    current_user: User = Depends(require_super_admin),
+):
+    """
+    Stoppt den automatischen Background-Sync.
+
+    - Nur Super-Admin
+    """
+    from app.services.inventory_sync_service import get_sync_service
+
+    sync_service = get_sync_service()
+    await sync_service.stop_background_sync()
+    return {
+        "success": True,
+        "message": "Background-Sync gestoppt",
+        "status": sync_service.get_status()
+    }
+
+
+@router.patch("/sync-settings")
+async def update_sync_settings(
+    interval_seconds: int = 300,
+    current_user: User = Depends(require_super_admin),
+):
+    """
+    Konfiguriert die Sync-Einstellungen.
+
+    - interval_seconds: Sync-Intervall in Sekunden (min. 60, max. 3600)
+    - Nur Super-Admin
+    """
+    from app.services.inventory_sync_service import get_sync_service
+
+    # Validierung
+    if interval_seconds < 60:
+        raise HTTPException(status_code=400, detail="Intervall muss mindestens 60 Sekunden sein")
+    if interval_seconds > 3600:
+        raise HTTPException(status_code=400, detail="Intervall darf maximal 3600 Sekunden (1 Stunde) sein")
+
+    sync_service = get_sync_service()
+    sync_service.sync_interval_seconds = interval_seconds
+
+    return {
+        "success": True,
+        "message": f"Sync-Intervall auf {interval_seconds}s gesetzt",
+        "status": sync_service.get_status()
+    }

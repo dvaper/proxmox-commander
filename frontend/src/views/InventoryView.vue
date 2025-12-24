@@ -32,6 +32,24 @@
         </v-btn>
         <v-btn
           v-if="isSuperAdmin"
+          variant="outlined"
+          size="small"
+          @click="showSyncSettingsDialog = true"
+          class="mr-2"
+        >
+          <v-icon start>mdi-cog-sync</v-icon>
+          Auto-Sync
+          <v-chip
+            v-if="syncStatus.running"
+            color="success"
+            size="x-small"
+            class="ml-2"
+          >
+            Aktiv
+          </v-chip>
+        </v-btn>
+        <v-btn
+          v-if="isSuperAdmin"
           color="primary"
           variant="outlined"
           size="small"
@@ -281,6 +299,91 @@
       @rollback="onHistoryRollback"
     />
 
+    <!-- Sync-Einstellungen Dialog -->
+    <v-dialog v-model="showSyncSettingsDialog" max-width="500">
+      <v-card>
+        <v-toolbar color="primary" density="compact">
+          <v-toolbar-title>
+            <v-icon start>mdi-cog-sync</v-icon>
+            Auto-Sync Einstellungen
+          </v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-btn icon size="small" @click="showSyncSettingsDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-toolbar>
+
+        <v-card-text class="pa-4">
+          <!-- Status-Anzeige -->
+          <v-alert
+            :type="syncStatus.running ? 'success' : 'info'"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+          >
+            <div class="d-flex align-center justify-space-between">
+              <div>
+                <div class="font-weight-medium">
+                  {{ syncStatus.running ? 'Auto-Sync aktiv' : 'Auto-Sync inaktiv' }}
+                </div>
+                <div v-if="syncStatus.last_sync" class="text-caption">
+                  Letzter Sync: {{ formatSyncTime(syncStatus.last_sync) }}
+                </div>
+              </div>
+              <v-btn
+                :color="syncStatus.running ? 'error' : 'success'"
+                variant="flat"
+                size="small"
+                :loading="syncToggling"
+                @click="toggleBackgroundSync"
+              >
+                <v-icon start>{{ syncStatus.running ? 'mdi-stop' : 'mdi-play' }}</v-icon>
+                {{ syncStatus.running ? 'Stoppen' : 'Starten' }}
+              </v-btn>
+            </div>
+          </v-alert>
+
+          <!-- Intervall-Einstellung -->
+          <div class="text-subtitle-2 mb-2">Sync-Intervall</div>
+          <v-slider
+            v-model="syncIntervalMinutes"
+            :min="1"
+            :max="60"
+            :step="1"
+            thumb-label="always"
+            :disabled="syncToggling"
+          >
+            <template v-slot:thumb-label="{ modelValue }">
+              {{ modelValue }} min
+            </template>
+          </v-slider>
+          <div class="text-caption text-grey mb-4">
+            Das Inventory wird alle {{ syncIntervalMinutes }} Minute(n) mit Proxmox synchronisiert.
+          </div>
+
+          <v-btn
+            color="primary"
+            variant="outlined"
+            block
+            :loading="savingInterval"
+            @click="saveSyncInterval"
+          >
+            <v-icon start>mdi-content-save</v-icon>
+            Intervall speichern
+          </v-btn>
+
+          <v-divider class="my-4"></v-divider>
+
+          <!-- Info -->
+          <div class="text-caption text-grey">
+            <v-icon size="small">mdi-information</v-icon>
+            Der Auto-Sync erkennt neue VMs in Proxmox und fuegt sie automatisch
+            zur Gruppe "proxmox_discovered" hinzu.
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
     <!-- Gruppe löschen Bestätigung -->
     <v-dialog v-model="showDeleteDialog" max-width="400">
       <v-card>
@@ -360,6 +463,11 @@ const deleting = ref(false)
 
 // Sync-State
 const syncing = ref(false)
+const showSyncSettingsDialog = ref(false)
+const syncStatus = ref({ running: false, last_sync: null, interval_seconds: 300 })
+const syncIntervalMinutes = ref(5)
+const syncToggling = ref(false)
+const savingInterval = ref(false)
 
 const groupHeaders = [
   { title: 'Name', key: 'name' },
@@ -546,7 +654,72 @@ async function syncInventory() {
   }
 }
 
-onMounted(loadData)
+// ========================================
+// Background Sync Einstellungen
+// ========================================
+
+async function loadSyncStatus() {
+  try {
+    const response = await api.get('/api/inventory/sync-status')
+    syncStatus.value = response.data
+    syncIntervalMinutes.value = Math.round(response.data.interval_seconds / 60)
+  } catch (e) {
+    // Nicht kritisch - Status bleibt auf Default
+    console.debug('Sync-Status nicht verfuegbar:', e)
+  }
+}
+
+async function toggleBackgroundSync() {
+  syncToggling.value = true
+  try {
+    if (syncStatus.value.running) {
+      await api.post('/api/inventory/sync-background/stop')
+      showSnackbar?.('Auto-Sync gestoppt', 'info')
+    } else {
+      await api.post('/api/inventory/sync-background/start')
+      showSnackbar?.('Auto-Sync gestartet', 'success')
+    }
+    await loadSyncStatus()
+  } catch (e) {
+    console.error('Fehler beim Toggle:', e)
+    showSnackbar?.(`Fehler: ${e.response?.data?.detail || e.message}`, 'error')
+  } finally {
+    syncToggling.value = false
+  }
+}
+
+async function saveSyncInterval() {
+  savingInterval.value = true
+  try {
+    const intervalSeconds = syncIntervalMinutes.value * 60
+    await api.patch(`/api/inventory/sync-settings?interval_seconds=${intervalSeconds}`)
+    showSnackbar?.(`Intervall auf ${syncIntervalMinutes.value} Minute(n) gesetzt`, 'success')
+    await loadSyncStatus()
+  } catch (e) {
+    console.error('Fehler beim Speichern:', e)
+    showSnackbar?.(`Fehler: ${e.response?.data?.detail || e.message}`, 'error')
+  } finally {
+    savingInterval.value = false
+  }
+}
+
+function formatSyncTime(isoString) {
+  if (!isoString) return '-'
+  const date = new Date(isoString)
+  return date.toLocaleString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+onMounted(async () => {
+  await loadData()
+  if (isSuperAdmin.value) {
+    await loadSyncStatus()
+  }
+})
 </script>
 
 <style scoped>

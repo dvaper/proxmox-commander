@@ -1,5 +1,17 @@
 [
   {
+    "version": "v0.2.20",
+    "date": "2025-12-24",
+    "changes": {
+      "Features": [
+        "Auto-Sync: Automatische Inventory-Synchronisation mit Proxmox",
+        "Auto-Sync: Konfigurierbares Sync-Intervall (1-60 Minuten)",
+        "Auto-Sync: Start/Stop-Steuerung ueber UI",
+        "Auto-Sync: Status-Anzeige mit letztem Sync-Zeitpunkt"
+      ]
+    }
+  },
+  {
     "version": "v0.2.19",
     "date": "2025-12-24",
     "changes": {

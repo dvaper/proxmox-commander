@@ -83,25 +83,28 @@ Der Ansible Commander hat erweiterte Features:
 - Basis Playbook Editor
 - Playbook Execution mit WebSocket Output
 - Playbook Scanner
+- Playbook-Vorlagen System (6 Templates)
+- Syntax-Validierung (YAML + Ansible)
+- Git-Integration (Commit nach Aenderung)
 
-**Fehlend:**
-- [ ] Playbook-Vorlagen-System mit Kategorien
+**Status:** ✅ Bereits vollstaendig implementiert
 
 ---
 
 ### 2.2 Inventory Sync Service Erweiterungen
-**Referenz:** `ansible-commander/backend/app/services/inventory_sync_service.py`
+**Status:** ✅ Implementiert (v0.2.20, 2025-12-24)
 
 **Features im Ansible Commander:**
 - Background-Sync mit Proxmox
 - Automatische Host-Erkennung
 - Sync-Intervall konfigurierbar
 
-**Im Proxmox Commander vorhanden:** Basis-Sync
-
-**Fehlend:**
-- [ ] Konfigurierbares Sync-Intervall ueber UI
-- [ ] Background-Sync als optionaler Hintergrund-Task
+**Im Proxmox Commander implementiert:**
+- [x] Basis-Sync (manuell via Button)
+- [x] Background-Sync mit Start/Stop-Steuerung
+- [x] Konfigurierbares Sync-Intervall ueber UI (1-60 Minuten)
+- [x] Status-Anzeige mit letztem Sync-Zeitpunkt
+- [x] API-Endpoints: `/sync-background/start`, `/sync-background/stop`, `/sync-settings`
 
 ---
 
@@ -208,8 +211,10 @@ Hardcodierte VLAN-Konfiguration. Proxmox Commander laedt VLANs **dynamisch aus N
 1. ~~**VM-Loeschung testen**~~ - ✅ Erledigt (2025-12-24)
 2. ~~**NetBox VM-Objekt beim Deployment**~~ - ✅ Erledigt (v0.2.18, 2025-12-24)
 3. ~~**Theme-Auswahl**~~ - ✅ Erledigt (v0.2.19, 2025-12-24)
-4. **Playbook-Vorlagen** - Verbessert UX
-5. **Background Inventory Sync** - Automatisierung
+4. ~~**Playbook-Vorlagen**~~ - ✅ Bereits implementiert
+5. ~~**Background Inventory Sync**~~ - ✅ Erledigt (v0.2.20, 2025-12-24)
+
+**Alle Hauptfeatures aus der Prioritaetsliste wurden implementiert!**
 
 ---
 
