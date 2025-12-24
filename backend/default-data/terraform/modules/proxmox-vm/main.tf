@@ -1,81 +1,84 @@
-# Proxmox VM Modul - VM-Erstellung
+# Proxmox VM Modul - VM-Erstellung (bpg/proxmox Provider)
 # Automatisch verwaltet durch Proxmox Commander
 
 terraform {
   required_providers {
     proxmox = {
-      source  = "Telmate/proxmox"
-      version = "~> 2.9"
+      source  = "bpg/proxmox"
+      version = "~> 0.70"
     }
   }
 }
 
-resource "proxmox_vm_qemu" "vm" {
+resource "proxmox_virtual_environment_vm" "vm" {
   name        = var.name
-  vmid        = var.vmid
-  target_node = var.target_node
-  desc        = var.description
+  vm_id       = var.vmid
+  node_name   = var.target_node
+  description = var.description
 
   # Template-Clone
-  clone      = var.template_id
-  clone_wait = 30
-  full_clone = true
+  clone {
+    vm_id = var.template_id
+    full  = true
+  }
 
-  # Ressourcen
-  cores   = var.cores
-  sockets = 1
-  cpu     = "host"
-  memory  = var.memory
-  balloon = var.memory
+  # CPU
+  cpu {
+    cores   = var.cores
+    sockets = 1
+    type    = "host"
+  }
+
+  # Memory
+  memory {
+    dedicated = var.memory
+  }
 
   # Boot
-  boot     = "order=scsi0;ide2;net0"
-  bootdisk = "scsi0"
-  agent    = 1
-  onboot   = true
+  boot_order = ["scsi0", "ide2", "net0"]
+  agent {
+    enabled = true
+  }
+  on_boot = true
 
-  # SCSI Controller
-  scsihw = "virtio-scsi-single"
-
-  # Disk (2.9.x Syntax)
+  # Disk
   disk {
-    type     = "scsi"
-    storage  = var.disk_storage
-    size     = "${var.disk_size}G"
-    cache    = "writeback"
-    discard  = "on"
-    iothread = 1
-    slot     = 0
+    interface    = "scsi0"
+    size         = var.disk_size
+    datastore_id = var.disk_storage
+    cache        = "writeback"
+    discard      = "on"
+    iothread     = true
+    ssd          = true
   }
 
   # Netzwerk
-  network {
+  network_device {
     model  = "virtio"
     bridge = var.bridge
   }
 
   # Cloud-Init
-  os_type    = "cloud-init"
-  ciuser     = var.ssh_user
-  sshkeys    = join("\n", var.ssh_keys)
-  ipconfig0  = "ip=${var.ip_address}/${var.netmask},gw=${var.gateway}"
-  nameserver = join(" ", var.dns_servers)
-
-  # Custom Cloud-Init User-Data (optional)
-  cicustom = var.cloud_init_user_data != "" ? "user=local:snippets/${var.name}-cloud-init.yaml" : ""
-
-  # Timeouts
-  timeouts {
-    create = "10m"
-    update = "10m"
-    delete = "5m"
+  initialization {
+    user_account {
+      username = var.ssh_user
+      keys     = var.ssh_keys
+    }
+    ip_config {
+      ipv4 {
+        address = "${var.ip_address}/${var.netmask}"
+        gateway = var.gateway
+      }
+    }
+    dns {
+      servers = var.dns_servers
+    }
   }
 
   lifecycle {
     ignore_changes = [
-      network,
-      ciuser,
-      sshkeys,
+      network_device,
+      initialization,
       disk,
       clone,
     ]

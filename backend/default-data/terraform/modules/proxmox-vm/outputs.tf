@@ -1,19 +1,19 @@
-# Proxmox VM Modul - Outputs
+# Proxmox VM Modul - Outputs (bpg/proxmox Provider)
 # Automatisch verwaltet durch Proxmox Commander
 
 output "vmid" {
   description = "VM-ID in Proxmox"
-  value       = proxmox_vm_qemu.vm.vmid
+  value       = proxmox_virtual_environment_vm.vm.vm_id
 }
 
 output "name" {
   description = "VM-Name"
-  value       = proxmox_vm_qemu.vm.name
+  value       = proxmox_virtual_environment_vm.vm.name
 }
 
 output "target_node" {
   description = "Proxmox-Node"
-  value       = proxmox_vm_qemu.vm.target_node
+  value       = proxmox_virtual_environment_vm.vm.node_name
 }
 
 output "ip_address" {

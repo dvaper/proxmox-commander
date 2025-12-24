@@ -6,19 +6,19 @@ terraform {
 
   required_providers {
     proxmox = {
-      source  = "Telmate/proxmox"
-      version = "~> 2.9"
+      source  = "bpg/proxmox"
+      version = "~> 0.70"
     }
   }
 }
 
-# Proxmox Provider - Credentials werden via Environment Variables gesetzt
-# PM_API_URL, PM_API_TOKEN_ID, PM_API_TOKEN_SECRET
+# Proxmox Provider (bpg) - kompatibel mit Proxmox VE 8.x und 9.x
 provider "proxmox" {
-  pm_api_url          = var.proxmox_api_url
-  pm_api_token_id     = var.proxmox_token_id
-  pm_api_token_secret = var.proxmox_token_secret
-  pm_tls_insecure     = var.proxmox_tls_insecure
-  pm_parallel         = 2
-  pm_timeout          = 600
+  endpoint  = var.proxmox_api_url
+  api_token = "${var.proxmox_token_id}=${var.proxmox_token_secret}"
+  insecure  = var.proxmox_tls_insecure
+
+  ssh {
+    agent = false
+  }
 }
