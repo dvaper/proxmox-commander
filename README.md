@@ -15,15 +15,15 @@ VM-Management-Plattform fuer Proxmox VE mit integriertem NetBox (IPAM/DCIM), Ans
 
 | Komponente | Minimum | Empfohlen |
 |------------|---------|-----------|
-| Docker | 20.10 | 24.x+ |
-| Docker Compose | v2.0 | v2.20+ |
+| Docker | 24.x | 27.x+ |
+| Docker Compose | v2.20 | v2.30+ |
 | RAM | 4 GB* | 8 GB |
 | Disk | 10 GB | 20 GB |
 
 *4 GB ist das absolute Minimum - NetBox kann bei wenig RAM langsam starten (bis zu 5 Min).
 
 **Proxmox VE Anforderungen:**
-- Proxmox VE 7.x oder 8.x
+- Proxmox VE 8.x oder 9.x
 - API-Token mit folgenden Berechtigungen:
 
 | Berechtigung | Beschreibung |
@@ -37,18 +37,21 @@ VM-Management-Plattform fuer Proxmox VE mit integriertem NetBox (IPAM/DCIM), Ans
 | `VM.Config.Cloudinit` | Cloud-Init konfigurieren |
 | `VM.Config.Options` | VM-Optionen aendern |
 | `VM.PowerMgmt` | Start/Stop/Reboot |
-| `VM.Monitor` | Guest-Agent, Status |
 | `VM.Audit` | VM-Konfiguration lesen |
 | `VM.Snapshot` | Snapshots erstellen/loeschen |
 | `VM.Snapshot.Rollback` | Snapshot-Rollback |
 | `VM.Migrate` | VM-Migration |
 | `Datastore.AllocateSpace` | Disk-Speicher anlegen |
 | `Datastore.Audit` | Storage-Info lesen |
-| `Sys.Audit` | Cluster-Ressourcen lesen |
+| `Sys.Audit` | Cluster-Ressourcen, Guest-Agent Status |
+| `Sys.Modify` | Erweiterte Monitor-Befehle (optional) |
+
+> **Hinweis PVE 9.x:** Die Berechtigung `VM.Monitor` wurde in Proxmox VE 9.0 entfernt.
+> Stattdessen wird `Sys.Audit` fuer den Basiszugriff auf Guest-Agent und Monitor benoetigt.
 
 **Empfohlene Rolle erstellen (Proxmox):**
 ```bash
-pveum role add TerraformRole -privs "VM.Allocate VM.Clone VM.Config.Disk VM.Config.CPU VM.Config.Memory VM.Config.Network VM.Config.Cloudinit VM.Config.Options VM.PowerMgmt VM.Monitor VM.Audit VM.Snapshot VM.Snapshot.Rollback VM.Migrate Datastore.AllocateSpace Datastore.Audit Sys.Audit"
+pveum role add TerraformRole -privs "VM.Allocate VM.Clone VM.Config.Disk VM.Config.CPU VM.Config.Memory VM.Config.Network VM.Config.Cloudinit VM.Config.Options VM.PowerMgmt VM.Audit VM.Snapshot VM.Snapshot.Rollback VM.Migrate Datastore.AllocateSpace Datastore.Audit Sys.Audit"
 pveum user add terraform@pve
 pveum aclmod / -user terraform@pve -role TerraformRole
 pveum user token add terraform@pve terraform-token --privsep=0

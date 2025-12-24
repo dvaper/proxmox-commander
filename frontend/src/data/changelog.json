@@ -6,6 +6,11 @@
       "Bugfixes": [
         "NetBox: VLAN-Import zeigt automatisch gescannte VLANs beim Laden",
         "NetBox: Tab-Wechsel nur wenn keine neuen VLANs vorhanden"
+      ],
+      "Dokumentation": [
+        "README: Docker-Versionen aktualisiert (24.x+ / 27.x+)",
+        "README: Proxmox VE 9.x Unterstuetzung dokumentiert",
+        "README: VM.Monitor entfernt (deprecated in PVE 9.0), Sys.Audit hinzugefuegt"
       ]
     }
   },
