@@ -9,7 +9,8 @@
         "Gotify: Test-Nachricht senden Button"
       ],
       "Bugfixes": [
-        "Gotify: Bessere Fehlermeldung wenn Token nicht gespeichert"
+        "Gotify: Bessere Fehlermeldung wenn Token nicht gespeichert",
+        "Gotify: Verbindungstest nutzt jetzt /message statt /application (App-Token kompatibel)"
       ]
     }
   },

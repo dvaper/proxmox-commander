@@ -195,21 +195,30 @@ class GotifyChannel(NotificationChannel):
             return False
 
     async def test_connection(self) -> tuple[bool, str]:
-        """Testet die Gotify-Verbindung"""
+        """Testet die Gotify-Verbindung durch Senden einer Test-Nachricht"""
         if not self.url or not self.token:
             return False, "URL oder Token nicht konfiguriert"
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(
-                    f"{self.url}/application",
-                    headers={"X-Gotify-Key": self.token}
+                # App-Tokens koennen nur Messages senden, nicht /application abfragen
+                # Daher testen wir mit einer echten (stillen) Test-Nachricht
+                response = await client.post(
+                    f"{self.url}/message",
+                    headers={"X-Gotify-Key": self.token},
+                    json={
+                        "title": "Verbindungstest",
+                        "message": "Gotify-Verbindung erfolgreich getestet.",
+                        "priority": 1  # Niedrige Prioritaet fuer Test
+                    }
                 )
 
                 if response.status_code == 200:
-                    return True, "Gotify-Verbindung erfolgreich"
+                    return True, "Gotify-Verbindung erfolgreich (Test-Nachricht gesendet)"
                 elif response.status_code == 401:
                     return False, "Authentifizierung fehlgeschlagen (ungueltiger Token)"
+                elif response.status_code == 403:
+                    return False, "Keine Berechtigung (Token hat keine Schreibrechte)"
                 else:
                     return False, f"HTTP {response.status_code}"
 
