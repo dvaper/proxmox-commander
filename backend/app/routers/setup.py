@@ -480,8 +480,10 @@ async def save_env_config(config: SetupConfig) -> SetupSaveResult:
                         written_keys.add(key)
                     else:
                         f.write(f"{line}\n")
-                else:
+                elif line.startswith("#") or not line:
+                    # Kommentare und leere Zeilen behalten
                     f.write(f"{line}\n")
+                # Zeilen ohne "=" werden ignoriert (ungueltige Eintraege)
 
             # Neue Werte hinzufuegen
             for key, value in new_values.items():

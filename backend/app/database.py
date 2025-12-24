@@ -61,17 +61,31 @@ async def run_migrations():
     from sqlalchemy import text
 
     async with engine.begin() as conn:
-        # Migration: netbox_user_id Spalte zu users hinzufügen
+        # Spalten der users-Tabelle ermitteln
         try:
             result = await conn.execute(text("PRAGMA table_info(users)"))
             columns = [row[1] for row in result.fetchall()]
+        except Exception as e:
+            logger.error(f"Konnte Tabellen-Info nicht lesen: {e}")
+            return
 
-            if "netbox_user_id" not in columns:
+        # Migration: netbox_user_id Spalte zu users hinzufügen
+        if "netbox_user_id" not in columns:
+            try:
                 logger.info("Migration: Füge netbox_user_id Spalte zu users hinzu...")
                 await conn.execute(text("ALTER TABLE users ADD COLUMN netbox_user_id INTEGER"))
                 logger.info("Migration erfolgreich: netbox_user_id hinzugefügt")
-        except Exception as e:
-            logger.debug(f"Migration übersprungen oder fehlgeschlagen: {e}")
+            except Exception as e:
+                logger.debug(f"Migration netbox_user_id fehlgeschlagen: {e}")
+
+        # Migration: theme Spalte zu users hinzufügen (v0.2.19)
+        if "theme" not in columns:
+            try:
+                logger.info("Migration: Füge theme Spalte zu users hinzu...")
+                await conn.execute(text("ALTER TABLE users ADD COLUMN theme VARCHAR(20) DEFAULT 'blue' NOT NULL"))
+                logger.info("Migration erfolgreich: theme hinzugefügt")
+            except Exception as e:
+                logger.debug(f"Migration theme fehlgeschlagen: {e}")
 
 
 async def create_default_admin():
