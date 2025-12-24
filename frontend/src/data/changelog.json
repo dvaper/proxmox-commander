@@ -1,5 +1,16 @@
 [
   {
+    "version": "v0.2.17",
+    "date": "2025-12-24",
+    "changes": {
+      "Infrastruktur": [
+        "Terraform: Wechsel von Telmate/proxmox auf bpg/proxmox Provider",
+        "Terraform: Kompatibilitaet mit Proxmox VE 8.x und 9.x",
+        "Terraform: Modul-Konfiguration nach funktionierender Referenz aktualisiert"
+      ]
+    }
+  },
+  {
     "version": "v0.2.16",
     "date": "2025-12-24",
     "changes": {

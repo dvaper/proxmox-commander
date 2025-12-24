@@ -1,86 +1,87 @@
-# Proxmox VM Modul - VM-Erstellung (bpg/proxmox Provider)
-# Automatisch verwaltet durch Proxmox Commander
+# Proxmox VM Modul (bpg/proxmox Provider)
+# Erstellt eine VM aus einem Cloud-Init Template
 
 terraform {
   required_providers {
     proxmox = {
       source  = "bpg/proxmox"
-      version = "~> 0.70"
+      version = ">= 0.89.0"
     }
   }
 }
 
 resource "proxmox_virtual_environment_vm" "vm" {
   name        = var.name
-  vm_id       = var.vmid
   node_name   = var.target_node
+  vm_id       = var.vmid
   description = var.description
 
-  # Template-Clone
+  # VM aus Template klonen
   clone {
-    vm_id = var.template_id
-    full  = true
+    vm_id     = var.template_id
+    node_name = var.template_node
+    full      = true
   }
 
-  # CPU
+  # CPU Konfiguration
   cpu {
-    cores   = var.cores
-    sockets = 1
-    type    = "host"
+    cores = var.cores
+    type  = "host"
   }
 
-  # Memory
+  # RAM
   memory {
     dedicated = var.memory
   }
 
-  # Boot
-  boot_order = ["scsi0", "ide2", "net0"]
-  agent {
-    enabled = true
-  }
-  on_boot = true
-
-  # Disk
+  # Boot-Disk (wird vom Template geklont und resized)
   disk {
     interface    = "scsi0"
     size         = var.disk_size
     datastore_id = var.disk_storage
-    cache        = "writeback"
-    discard      = "on"
-    iothread     = true
-    ssd          = true
+    file_format  = "qcow2"
   }
 
   # Netzwerk
   network_device {
-    model  = "virtio"
     bridge = var.bridge
+    model  = "virtio"
   }
 
-  # Cloud-Init
+  # Cloud-Init Konfiguration
   initialization {
-    user_account {
-      username = var.ssh_user
-      keys     = var.ssh_keys
-    }
+    datastore_id = var.disk_storage
+
     ip_config {
       ipv4 {
         address = "${var.ip_address}/${var.netmask}"
         gateway = var.gateway
       }
     }
+
+    user_account {
+      username = var.ssh_user
+      keys     = var.ssh_keys
+    }
+
     dns {
       servers = var.dns_servers
     }
   }
 
+  # QEMU Guest Agent
+  agent {
+    enabled = true
+    timeout = "2m"
+  }
+
+  # Startup-Optionen
+  on_boot = true
+  started = true
+
   lifecycle {
     ignore_changes = [
-      network_device,
       initialization,
-      disk,
-      clone,
     ]
   }
 }
