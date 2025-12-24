@@ -1,5 +1,17 @@
 [
   {
+    "version": "v0.2.19",
+    "date": "2025-12-24",
+    "changes": {
+      "Features": [
+        "Theme-Auswahl: 5 Farbthemes zur Unterscheidung von anderen Apps",
+        "Theme-Auswahl: Blau (Standard), Orange, Gruen, Lila, Teal",
+        "Theme-Auswahl: Theme wird im Benutzerprofil gespeichert",
+        "Theme-Auswahl: Sofortige Vorschau beim Klick"
+      ]
+    }
+  },
+  {
     "version": "v0.2.18",
     "date": "2025-12-24",
     "changes": {

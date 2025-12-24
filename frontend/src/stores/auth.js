@@ -3,6 +3,7 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useTheme } from 'vuetify'
 import api from '@/api/client'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -10,6 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || null)
   const user = ref(null)
   const accessSummary = ref(null)
+  const currentTheme = ref(localStorage.getItem('theme') || 'blue')
 
   // Getters
   const isAuthenticated = computed(() => !!token.value)
@@ -44,10 +46,52 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await api.get('/api/auth/me')
       user.value = response.data
+
+      // Theme aus User-Profil laden und anwenden
+      if (response.data.theme) {
+        applyTheme(response.data.theme)
+      }
+
       return response.data
     } catch (error) {
       // Token ungültig
       logout()
+      throw error
+    }
+  }
+
+  function applyTheme(themeName) {
+    const validThemes = ['blue', 'orange', 'green', 'purple', 'teal']
+    const theme = validThemes.includes(themeName) ? themeName : 'blue'
+
+    currentTheme.value = theme
+    localStorage.setItem('theme', theme)
+
+    // Vuetify Theme setzen (wird in App.vue beobachtet)
+    try {
+      const vuetifyTheme = useTheme()
+      vuetifyTheme.global.name.value = theme
+    } catch {
+      // Vuetify noch nicht verfuegbar (wird spaeter in App.vue gesetzt)
+    }
+  }
+
+  async function updateTheme(themeName) {
+    try {
+      const response = await api.patch('/api/auth/me/preferences', {
+        theme: themeName,
+      })
+
+      applyTheme(response.data.theme)
+
+      // User-Objekt aktualisieren
+      if (user.value) {
+        user.value.theme = response.data.theme
+      }
+
+      return response.data
+    } catch (error) {
+      console.error('Fehler beim Speichern des Themes:', error)
       throw error
     }
   }
@@ -108,6 +152,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     user,
     accessSummary,
+    currentTheme,
     // Getters
     isAuthenticated,
     isSuperAdmin,
@@ -124,5 +169,7 @@ export const useAuthStore = defineStore('auth', () => {
     initAdmin,
     canAccessGroup,
     canAccessPlaybook,
+    applyTheme,
+    updateTheme,
   }
 })

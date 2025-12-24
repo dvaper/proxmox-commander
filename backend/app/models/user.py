@@ -25,6 +25,9 @@ class User(Base):
     # NetBox Integration
     netbox_user_id = Column(Integer, nullable=True)  # Referenz auf NetBox User ID
 
+    # Benutzer-Einstellungen
+    theme = Column(String(20), default="blue", nullable=False)  # UI-Theme (blue, orange, green, purple, teal)
+
     # Zeitstempel
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_login = Column(DateTime(timezone=True), nullable=True)

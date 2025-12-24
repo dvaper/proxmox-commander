@@ -3,7 +3,7 @@ User Schemas
 """
 from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 
 
 # ============== Group Access Schemas ==============
@@ -88,6 +88,7 @@ class UserResponse(BaseModel):
     is_super_admin: bool
     is_active: bool
     netbox_user_id: Optional[int] = None  # NetBox User ID für Synchronisation
+    theme: str = "blue"  # UI-Theme (blue, orange, green, purple, teal)
     created_at: datetime
     last_login: Optional[datetime] = None
 
@@ -198,3 +199,19 @@ class DefaultAccessSettings(BaseModel):
     """Schema für Default-Zugriffs-Einstellungen"""
     default_groups: List[str] = []
     default_playbooks: List[str] = []
+
+
+# ============== User Preferences Schemas ==============
+
+# Verfuegbare Theme-Namen
+ThemeName = Literal["blue", "orange", "green", "purple", "teal"]
+
+
+class UserPreferencesUpdate(BaseModel):
+    """Schema für User-Einstellungen Update"""
+    theme: Optional[ThemeName] = None
+
+
+class UserPreferencesResponse(BaseModel):
+    """Schema für User-Einstellungen Response"""
+    theme: str

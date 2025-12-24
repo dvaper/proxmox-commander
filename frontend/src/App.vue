@@ -212,8 +212,9 @@
 </template>
 
 <script setup>
-import { ref, computed, provide, onMounted, onUnmounted } from 'vue'
+import { ref, computed, provide, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useTheme } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 import ProfileDialog from '@/components/ProfileDialog.vue'
 import changelog from '@/data/changelog.json'
@@ -224,8 +225,16 @@ const appVersion = __APP_VERSION__
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const theme = useTheme()
 
 const drawer = ref(true)
+
+// Theme bei Aenderung anwenden
+watch(() => authStore.currentTheme, (newTheme) => {
+  if (newTheme && theme.global.name.value !== newTheme) {
+    theme.global.name.value = newTheme
+  }
+}, { immediate: true })
 const profileDialog = ref(null)
 const showChangelog = ref(false)
 const showHealthDetails = ref(false)

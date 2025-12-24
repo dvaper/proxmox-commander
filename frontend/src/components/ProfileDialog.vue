@@ -72,6 +72,30 @@
                 </v-list-item-subtitle>
               </v-list-item>
             </v-list>
+
+            <!-- Theme-Auswahl -->
+            <v-divider class="my-4"></v-divider>
+            <div class="text-subtitle-1 mb-3">
+              <v-icon start>mdi-palette</v-icon>
+              Farbtheme
+            </div>
+            <div class="d-flex flex-wrap ga-2">
+              <v-btn
+                v-for="theme in themes"
+                :key="theme.name"
+                :color="theme.color"
+                :variant="authStore.currentTheme === theme.name ? 'elevated' : 'outlined'"
+                size="small"
+                :loading="savingTheme && selectedTheme === theme.name"
+                @click="selectTheme(theme.name)"
+              >
+                <v-icon v-if="authStore.currentTheme === theme.name" start size="small">mdi-check</v-icon>
+                {{ theme.label }}
+              </v-btn>
+            </div>
+            <div class="text-caption text-grey mt-2">
+              Das Theme wird sofort angewendet und gespeichert.
+            </div>
           </v-window-item>
 
           <!-- Tab: Berechtigungen -->
@@ -211,6 +235,17 @@ const dialog = ref(false)
 const tab = ref('profile')
 const passwordForm = ref(null)
 const saving = ref(false)
+const savingTheme = ref(false)
+const selectedTheme = ref('')
+
+// Verfuegbare Themes
+const themes = [
+  { name: 'blue', label: 'Blau', color: '#1976D2' },
+  { name: 'orange', label: 'Orange', color: '#FF9800' },
+  { name: 'green', label: 'Gruen', color: '#4CAF50' },
+  { name: 'purple', label: 'Lila', color: '#9C27B0' },
+  { name: 'teal', label: 'Teal', color: '#009688' },
+]
 
 const passwordData = ref({
   currentPassword: '',
@@ -218,6 +253,22 @@ const passwordData = ref({
   confirmPassword: '',
   syncToNetbox: true,  // Standardmäßig aktiviert
 })
+
+async function selectTheme(themeName) {
+  if (authStore.currentTheme === themeName) return
+
+  savingTheme.value = true
+  selectedTheme.value = themeName
+  try {
+    await authStore.updateTheme(themeName)
+    showSnackbar('Theme gespeichert')
+  } catch (e) {
+    showSnackbar('Fehler beim Speichern des Themes', 'error')
+  } finally {
+    savingTheme.value = false
+    selectedTheme.value = ''
+  }
+}
 
 async function changePassword() {
   const { valid } = await passwordForm.value.validate()

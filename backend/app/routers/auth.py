@@ -16,6 +16,8 @@ from app.schemas.user import (
     Token,
     PasswordChangeRequest,
     UserAccessSummary,
+    UserPreferencesUpdate,
+    UserPreferencesResponse,
 )
 from app.auth.security import verify_password, get_password_hash, create_access_token
 from app.auth.dependencies import get_current_user, get_current_active_user
@@ -200,3 +202,33 @@ async def init_admin(
     await db.refresh(admin)
 
     return admin
+
+
+@router.get("/me/preferences", response_model=UserPreferencesResponse)
+async def get_my_preferences(current_user: User = Depends(get_current_active_user)):
+    """
+    Benutzer-Einstellungen abrufen.
+
+    Gibt aktuelle Theme-Einstellung zurueck.
+    """
+    return UserPreferencesResponse(theme=current_user.theme or "blue")
+
+
+@router.patch("/me/preferences", response_model=UserPreferencesResponse)
+async def update_my_preferences(
+    preferences: UserPreferencesUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Benutzer-Einstellungen aktualisieren.
+
+    Ermoeglicht das Aendern des UI-Themes.
+    """
+    if preferences.theme is not None:
+        current_user.theme = preferences.theme
+
+    await db.commit()
+    await db.refresh(current_user)
+
+    return UserPreferencesResponse(theme=current_user.theme or "blue")
