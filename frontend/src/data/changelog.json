@@ -1,5 +1,19 @@
 [
   {
+    "version": "v0.2.32",
+    "date": "2025-12-24",
+    "changes": {
+      "Features": [
+        "SMTP: Test-Mail an angemeldeten Benutzer senden",
+        "SMTP: HTML-formatierte Test-E-Mail mit Serverdaten",
+        "Gotify: Test-Nachricht senden Button"
+      ],
+      "Bugfixes": [
+        "Gotify: Bessere Fehlermeldung wenn Token nicht gespeichert"
+      ]
+    }
+  },
+  {
     "version": "v0.2.31",
     "date": "2025-12-24",
     "changes": {

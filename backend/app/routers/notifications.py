@@ -145,7 +145,7 @@ async def test_smtp_connection(
     current_user: User = Depends(get_current_super_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """SMTP-Verbindung testen"""
+    """SMTP-Verbindung testen (nur Login-Test, keine Mail)"""
     result = await db.execute(select(NotificationSettings).limit(1))
     settings = result.scalar_one_or_none()
 
@@ -167,6 +167,102 @@ async def test_smtp_connection(
     return ConnectionTestResponse(success=success, message=message)
 
 
+@router.post("/settings/send-test-email", response_model=ConnectionTestResponse)
+async def send_test_email(
+    current_user: User = Depends(get_current_super_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Test-E-Mail an den aktuellen Benutzer senden"""
+    if not current_user.email:
+        raise HTTPException(400, "Keine E-Mail-Adresse fuer Ihren Account hinterlegt")
+
+    result = await db.execute(select(NotificationSettings).limit(1))
+    settings = result.scalar_one_or_none()
+
+    if not settings or not settings.smtp_host:
+        raise HTTPException(400, "SMTP nicht konfiguriert")
+
+    if not settings.smtp_from_email:
+        raise HTTPException(400, "Absender-Adresse (From) nicht konfiguriert")
+
+    config = {
+        'smtp_host': settings.smtp_host,
+        'smtp_port': settings.smtp_port,
+        'smtp_user': settings.smtp_user,
+        'smtp_password': decrypt_value(settings.smtp_password_encrypted) if settings.smtp_password_encrypted else None,
+        'smtp_from_email': settings.smtp_from_email,
+        'smtp_from_name': settings.smtp_from_name or 'Proxmox Commander',
+        'smtp_use_tls': settings.smtp_use_tls,
+        'smtp_use_ssl': settings.smtp_use_ssl,
+    }
+
+    channel = EmailChannel(config)
+
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    subject = "Proxmox Commander - Test-E-Mail"
+    message = f"""Hallo {current_user.username},
+
+dies ist eine Test-E-Mail von Proxmox Commander.
+
+Wenn Sie diese E-Mail erhalten, funktioniert die SMTP-Konfiguration korrekt.
+
+Zeitstempel: {timestamp}
+Empfaenger: {current_user.email}
+Server: {settings.smtp_host}:{settings.smtp_port}
+
+Mit freundlichen Gruessen,
+Proxmox Commander
+"""
+
+    html_message = f"""
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <h2 style="color: #1976D2;">Proxmox Commander - Test-E-Mail</h2>
+    <p>Hallo <strong>{current_user.username}</strong>,</p>
+    <p>dies ist eine Test-E-Mail von Proxmox Commander.</p>
+    <p style="background: #e8f5e9; padding: 10px; border-left: 4px solid #4CAF50;">
+        Wenn Sie diese E-Mail erhalten, funktioniert die SMTP-Konfiguration korrekt.
+    </p>
+    <table style="margin-top: 20px; border-collapse: collapse;">
+        <tr><td style="padding: 5px 15px 5px 0; color: #666;">Zeitstempel:</td><td>{timestamp}</td></tr>
+        <tr><td style="padding: 5px 15px 5px 0; color: #666;">Empfaenger:</td><td>{current_user.email}</td></tr>
+        <tr><td style="padding: 5px 15px 5px 0; color: #666;">Server:</td><td>{settings.smtp_host}:{settings.smtp_port}</td></tr>
+    </table>
+    <p style="margin-top: 30px; color: #666; font-size: 0.9em;">
+        Mit freundlichen Gruessen,<br/>
+        <strong>Proxmox Commander</strong>
+    </p>
+</body>
+</html>
+"""
+
+    try:
+        success = await channel.send(
+            recipient=current_user.email,
+            subject=subject,
+            message=message,
+            html_message=html_message
+        )
+
+        if success:
+            logger.info(f"Test-E-Mail gesendet an {current_user.email}")
+            return ConnectionTestResponse(
+                success=True,
+                message=f"Test-E-Mail erfolgreich an {current_user.email} gesendet"
+            )
+        else:
+            return ConnectionTestResponse(
+                success=False,
+                message="E-Mail-Versand fehlgeschlagen (siehe Server-Logs)"
+            )
+
+    except Exception as e:
+        logger.error(f"Test-E-Mail fehlgeschlagen: {e}")
+        return ConnectionTestResponse(success=False, message=str(e))
+
+
 @router.post("/settings/test-gotify", response_model=ConnectionTestResponse)
 async def test_gotify_connection(
     current_user: User = Depends(get_current_super_admin),
@@ -177,17 +273,71 @@ async def test_gotify_connection(
     settings = result.scalar_one_or_none()
 
     if not settings or not settings.gotify_url:
-        raise HTTPException(400, "Gotify nicht konfiguriert")
+        raise HTTPException(400, "Gotify-URL nicht konfiguriert")
+
+    if not settings.gotify_token_encrypted:
+        raise HTTPException(400, "Gotify-Token nicht gespeichert. Bitte zuerst Token eingeben und speichern.")
 
     config = {
         'gotify_url': settings.gotify_url,
-        'gotify_token': decrypt_value(settings.gotify_token_encrypted) if settings.gotify_token_encrypted else None,
+        'gotify_token': decrypt_value(settings.gotify_token_encrypted),
     }
 
     channel = GotifyChannel(config)
     success, message = await channel.test_connection()
 
     return ConnectionTestResponse(success=success, message=message)
+
+
+@router.post("/settings/send-test-gotify", response_model=ConnectionTestResponse)
+async def send_test_gotify_notification(
+    current_user: User = Depends(get_current_super_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Test-Benachrichtigung an Gotify senden"""
+    result = await db.execute(select(NotificationSettings).limit(1))
+    settings = result.scalar_one_or_none()
+
+    if not settings or not settings.gotify_url:
+        raise HTTPException(400, "Gotify-URL nicht konfiguriert")
+
+    if not settings.gotify_token_encrypted:
+        raise HTTPException(400, "Gotify-Token nicht gespeichert. Bitte zuerst Token eingeben und speichern.")
+
+    config = {
+        'gotify_url': settings.gotify_url,
+        'gotify_token': decrypt_value(settings.gotify_token_encrypted),
+        'gotify_priority': settings.gotify_priority or 5,
+    }
+
+    channel = GotifyChannel(config)
+
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        success = await channel.send(
+            recipient='default',
+            subject="Proxmox Commander - Test",
+            message=f"Dies ist eine Test-Benachrichtigung.\n\nZeitstempel: {timestamp}\nBenutzer: {current_user.username}",
+            priority=settings.gotify_priority or 5
+        )
+
+        if success:
+            logger.info(f"Gotify Test-Nachricht gesendet von {current_user.username}")
+            return ConnectionTestResponse(
+                success=True,
+                message="Test-Benachrichtigung erfolgreich an Gotify gesendet"
+            )
+        else:
+            return ConnectionTestResponse(
+                success=False,
+                message="Senden fehlgeschlagen (siehe Server-Logs)"
+            )
+
+    except Exception as e:
+        logger.error(f"Gotify Test-Nachricht fehlgeschlagen: {e}")
+        return ConnectionTestResponse(success=False, message=str(e))
 
 
 # ==================== Webhooks (Admin) ====================

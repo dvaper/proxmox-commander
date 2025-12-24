@@ -113,6 +113,16 @@
               >
                 Verbindung testen
               </v-btn>
+              <v-btn
+                color="success"
+                variant="tonal"
+                size="small"
+                :loading="sendingTestEmail"
+                @click="sendTestEmail"
+              >
+                <v-icon start size="small">mdi-email-send</v-icon>
+                Test-Mail senden
+              </v-btn>
             </div>
 
             <v-alert
@@ -189,6 +199,16 @@
                 @click="testGotify"
               >
                 Verbindung testen
+              </v-btn>
+              <v-btn
+                color="success"
+                variant="tonal"
+                size="small"
+                :loading="sendingTestGotify"
+                @click="sendTestGotify"
+              >
+                <v-icon start size="small">mdi-bell-ring</v-icon>
+                Test-Nachricht
               </v-btn>
             </div>
 
@@ -517,6 +537,8 @@ const savingGotify = ref(false)
 const savingGeneral = ref(false)
 const testingSmtp = ref(false)
 const testingGotify = ref(false)
+const sendingTestEmail = ref(false)
+const sendingTestGotify = ref(false)
 
 // Test results
 const smtpTestResult = ref(null)
@@ -687,6 +709,25 @@ async function testSmtp() {
   }
 }
 
+async function sendTestEmail() {
+  sendingTestEmail.value = true
+  smtpTestResult.value = null
+  try {
+    const response = await api.post('/api/notifications/settings/send-test-email')
+    smtpTestResult.value = response.data
+    if (response.data.success) {
+      loadLog() // Log aktualisieren
+    }
+  } catch (e) {
+    smtpTestResult.value = {
+      success: false,
+      message: e.response?.data?.detail || 'Test-Mail konnte nicht gesendet werden'
+    }
+  } finally {
+    sendingTestEmail.value = false
+  }
+}
+
 async function testGotify() {
   testingGotify.value = true
   gotifyTestResult.value = null
@@ -700,6 +741,25 @@ async function testGotify() {
     }
   } finally {
     testingGotify.value = false
+  }
+}
+
+async function sendTestGotify() {
+  sendingTestGotify.value = true
+  gotifyTestResult.value = null
+  try {
+    const response = await api.post('/api/notifications/settings/send-test-gotify')
+    gotifyTestResult.value = response.data
+    if (response.data.success) {
+      loadLog() // Log aktualisieren
+    }
+  } catch (e) {
+    gotifyTestResult.value = {
+      success: false,
+      message: e.response?.data?.detail || 'Test-Nachricht konnte nicht gesendet werden'
+    }
+  } finally {
+    sendingTestGotify.value = false
   }
 }
 
