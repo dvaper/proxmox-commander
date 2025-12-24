@@ -24,7 +24,7 @@
       </v-list-item>
 
       <div v-else class="sidebar-banner-header">
-        <AppLogo variant="banner" size="sm" class="sidebar-banner-logo" />
+        <AppLogo variant="banner" size="md" class="sidebar-banner-logo" />
         <div class="sidebar-banner-version">
           v{{ appVersion }}
           <v-btn

@@ -4,7 +4,7 @@
       <v-col cols="12" sm="8" md="5" lg="4">
         <!-- Logo Banner ueber dem Login-Formular -->
         <div class="d-flex justify-center mb-6">
-          <AppLogo variant="banner" size="md" />
+          <AppLogo variant="banner" size="lg" />
         </div>
 
         <v-card class="elevation-12">
