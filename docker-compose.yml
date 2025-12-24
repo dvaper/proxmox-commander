@@ -34,7 +34,8 @@ services:
       - TZ=${TZ:-Europe/Berlin}
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
       - DEBUG=${DEBUG:-false}
-      - NETBOX_URL=http://netbox:8080
+      # NetBox laeuft mit BASE_PATH=/netbox/, daher URL mit Pfad
+      - NETBOX_URL=http://netbox:8080/netbox
       - NETBOX_TOKEN=${NETBOX_TOKEN:-}
       - DATA_DIR=/data
       - INVENTORY_DIR=/data/inventory
@@ -65,6 +66,8 @@ services:
     image: registry.newsxc.net/darthvaper/docker-proxmox-commander/netbox:v4.0
     container_name: proxmox-commander-netbox
     restart: unless-stopped
+    # Port 8081 nur noch für direkten Zugriff (optional)
+    # NetBox ist auch über /netbox/ im Frontend erreichbar
     ports:
       - "${NETBOX_PORT:-8081}:8080"
     depends_on:
@@ -75,6 +78,8 @@ services:
     environment:
       - TZ=${TZ:-Europe/Berlin}
       - CORS_ORIGIN_ALLOW_ALL=True
+      # BASE_PATH für Zugriff über /netbox/ Subpfad
+      - BASE_PATH=/netbox/
       - DB_HOST=postgres
       - DB_NAME=netbox
       - DB_USER=netbox

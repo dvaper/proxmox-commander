@@ -65,9 +65,9 @@ class Settings(BaseSettings):
         return self.playbooks_dir
 
     # ==========================================================================
-    # NetBox (interner Container)
+    # NetBox (interner Container mit BASE_PATH=/netbox/)
     # ==========================================================================
-    netbox_url: str = "http://netbox:8080"
+    netbox_url: str = "http://netbox:8080/netbox"
     netbox_token: Optional[str] = None
 
     # ==========================================================================
