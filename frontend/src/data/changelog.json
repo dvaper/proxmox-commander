@@ -1,5 +1,15 @@
 [
   {
+    "version": "v0.2.26",
+    "date": "2025-12-24",
+    "changes": {
+      "UI": [
+        "Logo im Sidebar-Header und auf der Login-Seite",
+        "Hexagon-Logo mit Server-Rack und Netzwerk-Symbolen"
+      ]
+    }
+  },
+  {
     "version": "v0.2.25",
     "date": "2025-12-24",
     "changes": {
