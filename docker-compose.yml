@@ -62,7 +62,7 @@ services:
   # =============================================================================
 
   netbox:
-    image: netboxcommunity/netbox:v4.0
+    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/netbox:v4.0
     container_name: proxmox-commander-netbox
     restart: unless-stopped
     ports:
@@ -94,7 +94,7 @@ services:
       - proxmox-commander
 
   netbox-worker:
-    image: netboxcommunity/netbox:v4.0
+    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/netbox:v4.0
     container_name: proxmox-commander-netbox-worker
     restart: unless-stopped
     depends_on:
@@ -117,7 +117,7 @@ services:
       - proxmox-commander
 
   netbox-housekeeping:
-    image: netboxcommunity/netbox:v4.0
+    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/netbox:v4.0
     container_name: proxmox-commander-netbox-housekeeping
     restart: unless-stopped
     depends_on:
@@ -140,7 +140,7 @@ services:
   # =============================================================================
 
   postgres:
-    image: postgres:16-alpine
+    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/postgres:16-alpine
     container_name: proxmox-commander-postgres
     restart: unless-stopped
     environment:
@@ -159,7 +159,7 @@ services:
       - proxmox-commander
 
   redis:
-    image: redis:7-alpine
+    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/redis:7-alpine
     container_name: proxmox-commander-redis
     restart: unless-stopped
     command: redis-server --appendonly yes
