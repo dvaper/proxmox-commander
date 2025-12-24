@@ -259,7 +259,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import axios from 'axios'
+import api from '@/api/client'
 
 // State
 const loading = ref(true)
@@ -320,7 +320,7 @@ function truncateKey(key) {
 async function loadSettings() {
   loading.value = true
   try {
-    const response = await axios.get('/api/cloud-init/settings')
+    const response = await api.get('/api/cloud-init/settings')
     settings.value = response.data
     originalSettings.value = JSON.parse(JSON.stringify(response.data))
   } catch (error) {
@@ -334,7 +334,7 @@ async function loadSettings() {
 async function saveSettings() {
   saving.value = true
   try {
-    await axios.put('/api/cloud-init/settings', {
+    await api.put('/api/cloud-init/settings', {
       admin_username: settings.value.admin_username,
       admin_gecos: settings.value.admin_gecos,
       phone_home_enabled: settings.value.phone_home_enabled,
@@ -364,7 +364,7 @@ async function addKey() {
 
   addingKey.value = true
   try {
-    const response = await axios.post('/api/cloud-init/settings/ssh-keys', { key })
+    const response = await api.post('/api/cloud-init/settings/ssh-keys', { key })
     settings.value.ssh_authorized_keys = response.data
     originalSettings.value.ssh_authorized_keys = [...response.data]
     newSshKey.value = ''
@@ -381,7 +381,7 @@ async function addKey() {
 async function removeKey(key) {
   deletingKey.value = key
   try {
-    const response = await axios.delete('/api/cloud-init/settings/ssh-keys', { data: { key } })
+    const response = await api.delete('/api/cloud-init/settings/ssh-keys', { data: { key } })
     settings.value.ssh_authorized_keys = response.data.remaining_keys
     originalSettings.value.ssh_authorized_keys = [...response.data.remaining_keys]
     showMessage('SSH-Key entfernt')
