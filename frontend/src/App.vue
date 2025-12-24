@@ -24,7 +24,14 @@
       </v-list-item>
 
       <div v-else class="sidebar-banner-header">
-        <AppLogo variant="banner" size="md" class="sidebar-banner-logo" />
+        <v-tooltip location="right" content-class="logo-tooltip">
+          <template v-slot:activator="{ props }">
+            <div v-bind="props" class="sidebar-banner-logo-wrapper">
+              <AppLogo variant="banner" size="md" class="sidebar-banner-logo" />
+            </div>
+          </template>
+          <AppLogo variant="banner" size="xl" />
+        </v-tooltip>
         <div class="sidebar-banner-version">
           v{{ appVersion }}
           <v-btn
@@ -402,6 +409,10 @@ html {
   text-align: center;
 }
 
+.sidebar-banner-logo-wrapper {
+  cursor: pointer;
+}
+
 .sidebar-banner-logo {
   max-width: 100%;
   height: auto;
@@ -414,5 +425,13 @@ html {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Logo Tooltip Styles */
+.logo-tooltip {
+  background: rgba(var(--v-theme-surface), 0.98) !important;
+  padding: 16px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
 }
 </style>
