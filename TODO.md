@@ -125,6 +125,53 @@ Der Ansible Commander hat erweiterte Features:
 
 ---
 
+### 2.3 Theme-Auswahl fuer Benutzer
+**Status:** Offen
+
+Ermoeglicht die Auswahl eines Farbthemas zur besseren Unterscheidung von anderen
+Applikationen (z.B. Ansible Commander).
+
+**Anforderungen:**
+- [ ] Theme-Auswahl im Benutzerprofil speichern
+- [ ] Mindestens 3-4 verschiedene Themes (z.B. Blau, Gruen, Orange, Lila)
+- [ ] Theme wird beim Login geladen
+- [ ] Vuetify Theme-System nutzen (`$vuetify.theme`)
+
+**Technische Umsetzung:**
+
+1. **Backend:** User-Model um `theme` Feld erweitern
+   ```python
+   # models/user.py
+   theme: str = "blue"  # Default
+   ```
+
+2. **Backend:** API-Endpoint zum Speichern
+   ```
+   PATCH /api/users/me/preferences
+   {"theme": "orange"}
+   ```
+
+3. **Frontend:** Theme beim App-Start laden
+   ```javascript
+   // Nach Login
+   vuetify.theme.global.name = user.theme
+   ```
+
+4. **Frontend:** Theme-Auswahl in Profil-Seite
+   - Farbvorschau als Chips oder Cards
+   - Sofortige Vorschau beim Klick
+
+**Vorgeschlagene Themes:**
+| Name | Primary Color | Beschreibung |
+|------|---------------|--------------|
+| blue | #1976D2 | Standard (wie Ansible Commander) |
+| orange | #FF9800 | Proxmox-aehnlich |
+| green | #4CAF50 | Frisch |
+| purple | #9C27B0 | Unterscheidbar |
+| teal | #009688 | Professionell |
+
+---
+
 ## Prioritaet 3: Nice-to-Have
 
 ### 3.1 Git Sync Service
@@ -203,8 +250,9 @@ Hardcodierte VLAN-Konfiguration. Proxmox Commander laedt VLANs **dynamisch aus N
 
 1. ~~**VM-Loeschung testen**~~ - ✅ Erledigt (2025-12-24)
 2. **NetBox VM-Objekt beim Deployment** - Vollstaendige DCIM-Integration
-3. **Playbook-Vorlagen** - Verbessert UX
-4. **Background Inventory Sync** - Automatisierung
+3. **Theme-Auswahl** - Unterscheidbarkeit von Ansible Commander
+4. **Playbook-Vorlagen** - Verbessert UX
+5. **Background Inventory Sync** - Automatisierung
 
 ---
 
