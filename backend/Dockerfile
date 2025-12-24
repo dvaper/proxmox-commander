@@ -6,13 +6,17 @@ WORKDIR /app
 ENV TZ=Europe/Berlin
 
 # System-Abhängigkeiten inkl. tzdata für Timezone-Support
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ansible \
-    openssh-client \
-    git \
-    curl \
-    unzip \
-    tzdata \
+# Retry-Logik fuer instabile Paketquellen
+RUN for i in 1 2 3; do \
+        apt-get update && break || sleep 10; \
+    done && \
+    apt-get install -y --no-install-recommends \
+        ansible \
+        openssh-client \
+        git \
+        curl \
+        unzip \
+        tzdata \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
     && rm -rf /var/lib/apt/lists/*
