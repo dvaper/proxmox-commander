@@ -296,6 +296,270 @@ class NetBoxService:
 
             return data["count"] == 0
 
+    # =========================================================================
+    # Virtualization - VM Management
+    # =========================================================================
+
+    async def get_or_create_cluster(self, cluster_name: str = "Proxmox") -> int:
+        """
+        Holt oder erstellt einen Virtualization-Cluster in NetBox.
+
+        Args:
+            cluster_name: Name des Clusters
+
+        Returns:
+            NetBox-ID des Clusters
+        """
+        self._check_token()
+
+        async with httpx.AsyncClient() as client:
+            # Cluster suchen
+            response = await client.get(
+                f"{self.base_url}/api/virtualization/clusters/",
+                params={"name": cluster_name},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if data["count"] > 0:
+                return data["results"][0]["id"]
+
+            # Cluster-Type holen oder erstellen
+            type_response = await client.get(
+                f"{self.base_url}/api/virtualization/cluster-types/",
+                params={"name": "Proxmox VE"},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            type_response.raise_for_status()
+            type_data = type_response.json()
+
+            if type_data["count"] > 0:
+                cluster_type_id = type_data["results"][0]["id"]
+            else:
+                # Cluster-Type erstellen
+                create_type_response = await client.post(
+                    f"{self.base_url}/api/virtualization/cluster-types/",
+                    json={
+                        "name": "Proxmox VE",
+                        "slug": "proxmox-ve",
+                        "description": "Proxmox Virtual Environment",
+                    },
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+                create_type_response.raise_for_status()
+                cluster_type_id = create_type_response.json()["id"]
+
+            # Cluster erstellen
+            create_response = await client.post(
+                f"{self.base_url}/api/virtualization/clusters/",
+                json={
+                    "name": cluster_name,
+                    "type": cluster_type_id,
+                    "description": "Automatisch erstellt durch Proxmox Commander",
+                },
+                headers=self.headers,
+                timeout=10.0,
+            )
+            create_response.raise_for_status()
+            return create_response.json()["id"]
+
+    async def create_vm(
+        self,
+        name: str,
+        vcpus: int = 2,
+        memory_mb: int = 4096,
+        disk_gb: int = 32,
+        cluster_name: str = "Proxmox",
+        description: str = "",
+    ) -> dict:
+        """
+        Erstellt ein VM-Objekt in NetBox (virtualization/virtual-machines).
+
+        Args:
+            name: Name der VM
+            vcpus: Anzahl vCPUs
+            memory_mb: RAM in MB
+            disk_gb: Disk-Groesse in GB
+            cluster_name: Name des Clusters
+            description: Beschreibung
+
+        Returns:
+            VM-Objekt bei Erfolg
+        """
+        self._check_token()
+
+        cluster_id = await self.get_or_create_cluster(cluster_name)
+
+        async with httpx.AsyncClient() as client:
+            # Pruefen ob VM bereits existiert
+            check_response = await client.get(
+                f"{self.base_url}/api/virtualization/virtual-machines/",
+                params={"name": name},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            check_response.raise_for_status()
+            existing = check_response.json()
+
+            if existing["count"] > 0:
+                # VM existiert - aktualisieren
+                vm_id = existing["results"][0]["id"]
+                response = await client.patch(
+                    f"{self.base_url}/api/virtualization/virtual-machines/{vm_id}/",
+                    json={
+                        "vcpus": vcpus,
+                        "memory": memory_mb,
+                        "disk": disk_gb,
+                        "description": description,
+                        "status": "active",
+                    },
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+            else:
+                # Neue VM erstellen
+                response = await client.post(
+                    f"{self.base_url}/api/virtualization/virtual-machines/",
+                    json={
+                        "name": name,
+                        "cluster": cluster_id,
+                        "vcpus": vcpus,
+                        "memory": memory_mb,
+                        "disk": disk_gb,
+                        "description": description,
+                        "status": "active",
+                    },
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+
+            response.raise_for_status()
+            return response.json()
+
+    async def assign_ip_to_vm(self, vm_name: str, ip_address: str) -> bool:
+        """
+        Verknuepft eine IP-Adresse mit einer VM als primary_ip4.
+
+        Args:
+            vm_name: Name der VM
+            ip_address: IP-Adresse (ohne CIDR)
+
+        Returns:
+            True bei Erfolg
+        """
+        self._check_token()
+
+        async with httpx.AsyncClient() as client:
+            # VM finden
+            vm_response = await client.get(
+                f"{self.base_url}/api/virtualization/virtual-machines/",
+                params={"name": vm_name},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            vm_response.raise_for_status()
+            vm_data = vm_response.json()
+
+            if vm_data["count"] == 0:
+                return False
+
+            vm_id = vm_data["results"][0]["id"]
+
+            # IP finden
+            ip_response = await client.get(
+                f"{self.base_url}/api/ipam/ip-addresses/",
+                params={"address": ip_address},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            ip_response.raise_for_status()
+            ip_data = ip_response.json()
+
+            if ip_data["count"] == 0:
+                return False
+
+            ip_id = ip_data["results"][0]["id"]
+
+            # IP mit VM verknuepfen (assigned_object)
+            await client.patch(
+                f"{self.base_url}/api/ipam/ip-addresses/{ip_id}/",
+                json={
+                    "assigned_object_type": "virtualization.virtualmachine",
+                    "assigned_object_id": vm_id,
+                },
+                headers=self.headers,
+                timeout=10.0,
+            )
+
+            # VM aktualisieren mit primary_ip4
+            update_response = await client.patch(
+                f"{self.base_url}/api/virtualization/virtual-machines/{vm_id}/",
+                json={"primary_ip4": ip_id},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            update_response.raise_for_status()
+
+            return True
+
+    async def create_vm_with_ip(
+        self,
+        name: str,
+        ip_address: str,
+        vcpus: int = 2,
+        memory_mb: int = 4096,
+        disk_gb: int = 32,
+        cluster_name: str = "Proxmox",
+        description: str = "",
+    ) -> dict:
+        """
+        Erstellt ein VM-Objekt und verknuepft die IP als primary_ip4.
+
+        Args:
+            name: Name der VM
+            ip_address: IP-Adresse
+            vcpus: Anzahl vCPUs
+            memory_mb: RAM in MB
+            disk_gb: Disk-Groesse in GB
+            cluster_name: Name des Clusters
+            description: Beschreibung
+
+        Returns:
+            dict mit vm und ip_assigned Status
+        """
+        result = {
+            "success": False,
+            "vm": None,
+            "ip_assigned": False,
+            "error": None,
+        }
+
+        try:
+            # VM erstellen
+            vm = await self.create_vm(
+                name=name,
+                vcpus=vcpus,
+                memory_mb=memory_mb,
+                disk_gb=disk_gb,
+                cluster_name=cluster_name,
+                description=description,
+            )
+            result["vm"] = vm
+            result["success"] = True
+
+            # IP zuweisen
+            ip_assigned = await self.assign_ip_to_vm(name, ip_address)
+            result["ip_assigned"] = ip_assigned
+
+        except Exception as e:
+            result["error"] = str(e)
+
+        return result
+
     async def delete_vm(self, name: str) -> bool:
         """
         Löscht eine VM aus NetBox (virtualization/virtual-machines).

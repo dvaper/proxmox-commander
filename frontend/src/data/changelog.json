@@ -1,5 +1,17 @@
 [
   {
+    "version": "v0.2.18",
+    "date": "2025-12-24",
+    "changes": {
+      "Features": [
+        "NetBox: VM-Objekt wird beim Deployment automatisch erstellt",
+        "NetBox: IP-Adresse wird mit VM verknuepft (primary_ip4)",
+        "NetBox: Cluster 'Proxmox' wird automatisch angelegt",
+        "NetBox: VM-Objekt wird bei VM-Loeschung mitgeloescht"
+      ]
+    }
+  },
+  {
     "version": "v0.2.17",
     "date": "2025-12-24",
     "changes": {

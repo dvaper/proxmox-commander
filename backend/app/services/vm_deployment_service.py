@@ -396,7 +396,22 @@ module "{module_name}" {{
             )
             await netbox_service.activate_ip(vm_config.ip_address)
 
-            # 2. VM zu Ansible-Inventory hinzufügen (wenn Gruppe konfiguriert)
+            # 2. VM-Objekt in NetBox erstellen und IP verknuepfen
+            try:
+                await netbox_service.create_vm_with_ip(
+                    name=name,
+                    ip_address=vm_config.ip_address,
+                    vcpus=vm_config.cores,
+                    memory_mb=vm_config.memory_gb * 1024,
+                    disk_gb=vm_config.disk_size_gb,
+                    cluster_name="Proxmox",
+                    description=f"Deployed via Proxmox Commander (VMID: {vm_config.vmid})",
+                )
+            except Exception as e:
+                # NetBox VM-Fehler loggen, aber Deploy als erfolgreich werten
+                print(f"Warnung: NetBox VM-Erstellung fehlgeschlagen: {e}")
+
+            # 3. VM zu Ansible-Inventory hinzufügen (wenn Gruppe konfiguriert)
             if vm_config.ansible_group:
                 try:
                     ansible_inventory_service.add_host(

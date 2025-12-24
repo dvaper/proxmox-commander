@@ -55,37 +55,17 @@ Die `delete_vm_complete()` Methode existiert und funktioniert:
 ---
 
 ### 1.2 NetBox VM-Objekt beim Deployment erstellen
-**Status:** Offen
+**Status:** ✅ Implementiert (v0.2.18, 2025-12-24)
 
-Beim Terraform-Deployment wird aktuell nur die **IP-Adresse** in NetBox reserviert.
-Es sollte zusaetzlich ein **VM-Objekt** unter "Virtualization > Virtual Machines" erstellt werden.
+Beim Terraform-Deployment wird jetzt zusaetzlich ein **VM-Objekt** unter "Virtualization > Virtual Machines" erstellt.
 
-**Vorteile:**
-- Vollstaendige DCIM/IPAM-Integration
-- VM-Metadaten in NetBox sichtbar (CPU, RAM, Cluster, etc.)
-- IP-Adresse kann mit VM verknuepft werden
-- Bessere Uebersicht ueber alle verwalteten VMs
-
-**Zu implementieren:**
-- [ ] `netbox_service.create_vm()` Methode erweitern
-- [ ] Cluster/Site in NetBox automatisch erkennen oder konfigurierbar machen
-- [ ] VM-Objekt mit IP-Adresse verknuepfen
-- [ ] Bei VM-Loeschung: VM-Objekt mitloeschen (bereits vorbereitet)
-
-**API-Endpunkt:** `POST /api/virtualization/virtual-machines/`
-
-**Beispiel-Payload:**
-```json
-{
-  "name": "test-vm",
-  "cluster": 1,
-  "vcpus": 2,
-  "memory": 4096,
-  "disk": 32,
-  "status": "active",
-  "primary_ip4": 123
-}
-```
+**Implementiert:**
+- [x] `netbox_service.create_vm()` Methode
+- [x] `netbox_service.get_or_create_cluster()` - Cluster "Proxmox" wird automatisch angelegt
+- [x] `netbox_service.assign_ip_to_vm()` - IP wird mit VM verknuepft (primary_ip4)
+- [x] `netbox_service.create_vm_with_ip()` - Kombinierte Methode fuer Deploy
+- [x] `netbox_service.delete_vm()` - VM-Objekt wird bei Loeschung mitgeloescht
+- [x] Integration in `vm_deployment_service.on_deploy_success()`
 
 ---
 
@@ -249,7 +229,7 @@ Hardcodierte VLAN-Konfiguration. Proxmox Commander laedt VLANs **dynamisch aus N
 ## Implementierungs-Reihenfolge
 
 1. ~~**VM-Loeschung testen**~~ - ✅ Erledigt (2025-12-24)
-2. **NetBox VM-Objekt beim Deployment** - Vollstaendige DCIM-Integration
+2. ~~**NetBox VM-Objekt beim Deployment**~~ - ✅ Erledigt (v0.2.18, 2025-12-24)
 3. **Theme-Auswahl** - Unterscheidbarkeit von Ansible Commander
 4. **Playbook-Vorlagen** - Verbessert UX
 5. **Background Inventory Sync** - Automatisierung
