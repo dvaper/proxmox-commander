@@ -27,6 +27,7 @@ from app.services.ansible_inventory_service import ansible_inventory_service
 from app.services.proxmox_service import proxmox_service
 from app.services.vm_history_service import vm_history_service
 from app.services.cloud_init_service import cloud_init_service
+from app.services.notification_service import NotificationService
 from app.schemas.cloud_init import CloudInitProfile
 
 
@@ -471,6 +472,33 @@ module "{module_name}" {{
             except Exception as e:
                 print(f"Warnung: History-Eintrag konnte nicht erstellt werden: {e}")
 
+            # 5. Benachrichtigung senden
+            try:
+                async with async_session() as db:
+                    notification_service = NotificationService(db)
+                    await notification_service.notify(
+                        event_type="vm_created",
+                        subject=f"VM '{name}' erfolgreich erstellt",
+                        message=(
+                            f"Die VM '{name}' wurde erfolgreich deployed.\n\n"
+                            f"Details:\n"
+                            f"- VMID: {vm_config.vmid}\n"
+                            f"- IP-Adresse: {vm_config.ip_address}\n"
+                            f"- Node: {vm_config.target_node}\n"
+                            f"- Ressourcen: {vm_config.cores} Kerne, {vm_config.memory_gb} GB RAM"
+                        ),
+                        payload={
+                            "vm_name": name,
+                            "vmid": vm_config.vmid,
+                            "ip_address": vm_config.ip_address,
+                            "target_node": vm_config.target_node,
+                            "cores": vm_config.cores,
+                            "memory_gb": vm_config.memory_gb,
+                        }
+                    )
+            except Exception as e:
+                print(f"Warnung: Benachrichtigung konnte nicht gesendet werden: {e}")
+
         # Callback für IP-Freigabe bei Fehler
         async def on_deploy_failure():
             """Gibt die IP in NetBox frei wenn Deploy fehlschlägt"""
@@ -589,6 +617,30 @@ module "{module_name}" {{
                 )
             except Exception as e:
                 print(f"Warnung: History-Eintrag konnte nicht erstellt werden: {e}")
+
+            # 4. Benachrichtigung senden
+            try:
+                async with async_session() as db:
+                    notification_service = NotificationService(db)
+                    await notification_service.notify(
+                        event_type="vm_deleted",
+                        subject=f"VM '{name}' wurde geloescht",
+                        message=(
+                            f"Die VM '{name}' wurde erfolgreich geloescht.\n\n"
+                            f"Details:\n"
+                            f"- VMID: {vm_config.vmid}\n"
+                            f"- IP-Adresse: {vm_config.ip_address} (freigegeben)\n"
+                            f"- Node: {vm_config.target_node}"
+                        ),
+                        payload={
+                            "vm_name": name,
+                            "vmid": vm_config.vmid,
+                            "ip_address": vm_config.ip_address,
+                            "target_node": vm_config.target_node,
+                        }
+                    )
+            except Exception as e:
+                print(f"Warnung: Benachrichtigung konnte nicht gesendet werden: {e}")
 
         # Terraform destroy im Hintergrund starten
         import asyncio

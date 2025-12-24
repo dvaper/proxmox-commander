@@ -14,6 +14,7 @@ from app.database import async_session
 from app.models.execution import Execution
 from app.models.execution_log import ExecutionLog
 from app.services.output_streamer import OutputStreamer
+from app.services.notification_service import NotificationService
 
 
 class ExecutionRunner:
@@ -207,6 +208,49 @@ class ExecutionRunner:
                 ).total_seconds()
 
             await db.commit()
+
+            # Ansible-Benachrichtigungen senden
+            if execution.execution_type == "ansible":
+                try:
+                    notification_service = NotificationService(db)
+                    if return_code == 0:
+                        await notification_service.notify(
+                            event_type="ansible_completed",
+                            subject=f"Playbook '{execution.playbook_name}' erfolgreich",
+                            message=(
+                                f"Das Playbook '{execution.playbook_name}' wurde erfolgreich ausgefuehrt.\n\n"
+                                f"Details:\n"
+                                f"- Ziel: {execution.target_hosts or 'alle'}\n"
+                                f"- Dauer: {execution.duration_seconds:.1f} Sekunden"
+                            ),
+                            payload={
+                                "playbook_name": execution.playbook_name,
+                                "target_hosts": execution.target_hosts,
+                                "duration_seconds": execution.duration_seconds,
+                                "execution_id": execution.id,
+                            }
+                        )
+                    else:
+                        await notification_service.notify(
+                            event_type="ansible_failed",
+                            subject=f"Playbook '{execution.playbook_name}' fehlgeschlagen",
+                            message=(
+                                f"Das Playbook '{execution.playbook_name}' ist fehlgeschlagen.\n\n"
+                                f"Details:\n"
+                                f"- Ziel: {execution.target_hosts or 'alle'}\n"
+                                f"- Exit-Code: {return_code}\n"
+                                f"- Dauer: {execution.duration_seconds:.1f} Sekunden"
+                            ),
+                            payload={
+                                "playbook_name": execution.playbook_name,
+                                "target_hosts": execution.target_hosts,
+                                "exit_code": return_code,
+                                "duration_seconds": execution.duration_seconds,
+                                "execution_id": execution.id,
+                            }
+                        )
+                except Exception as notify_error:
+                    print(f"Warnung: Benachrichtigung konnte nicht gesendet werden: {notify_error}")
 
             # Callbacks ausführen
             if return_code == 0 and self.on_success:
