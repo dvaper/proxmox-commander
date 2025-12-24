@@ -8,12 +8,7 @@
         </div>
 
         <v-card class="elevation-12">
-          <v-card-title class="text-center py-4">
-            <v-icon class="mr-2">mdi-login</v-icon>
-            Anmelden
-          </v-card-title>
-
-          <v-card-text>
+          <v-card-text class="pt-6">
             <v-form @submit.prevent="handleLogin">
               <v-text-field
                 v-model="username"

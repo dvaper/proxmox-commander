@@ -110,29 +110,29 @@ const logoClass = computed(() => {
   height: 80px;
 }
 
-/* Banner Variante */
+/* Banner Variante - Mindestbreite fuer Lesbarkeit */
 .app-logo--banner.app-logo--xs {
-  height: 40px;
-  width: auto;
+  width: 200px;
+  height: auto;
 }
 
 .app-logo--banner.app-logo--sm {
-  height: 60px;
-  width: auto;
+  width: 280px;
+  height: auto;
 }
 
 .app-logo--banner.app-logo--md {
-  height: 80px;
-  width: auto;
+  width: 360px;
+  height: auto;
 }
 
 .app-logo--banner.app-logo--lg {
-  height: 120px;
-  width: auto;
+  width: 440px;
+  height: auto;
 }
 
 .app-logo--banner.app-logo--xl {
-  height: 160px;
-  width: auto;
+  width: 520px;
+  height: auto;
 }
 </style>

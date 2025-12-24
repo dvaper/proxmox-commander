@@ -1,5 +1,15 @@
 [
   {
+    "version": "v0.2.36",
+    "date": "2025-12-24",
+    "changes": {
+      "UI": [
+        "Logo-Banner: Groessere Darstellung fuer bessere Lesbarkeit",
+        "Login: Redundante 'Anmelden'-Ueberschrift entfernt"
+      ]
+    }
+  },
+  {
     "version": "v0.2.34",
     "date": "2025-12-24",
     "changes": {
