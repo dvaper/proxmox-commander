@@ -51,7 +51,8 @@ Proxmox Commander richtet sich an:
 - **VM-Deployment** via Terraform mit automatischer IP-Vergabe aus NetBox
 - **Ansible Integration** mit Live-Output via WebSocket
 - **NetBox IPAM** fuer IP-Adressverwaltung (integrierter Container)
-- **Cloud-Init** mit 13 spezialisierten Profilen
+- **Cloud-Init** mit 13 spezialisierten Profilen (vollstaendig konfigurierbar)
+- **Inventory Sync** erkennt VM-Migrationen und aktualisiert Node-Zuordnung
 - **Multi-Cluster** Unterstuetzung fuer mehrere Proxmox-Nodes
 - **Theme-Auswahl** mit Hell/Dunkel/System-Modus
 
@@ -161,10 +162,13 @@ Login mit den im Wizard angegebenen Credentials.
 
 ## Ports und Services
 
-| Service | Port | Beschreibung |
-|---------|------|--------------|
+| Service | Port / Pfad | Beschreibung |
+|---------|-------------|--------------|
 | Proxmox Commander | 8080 | Haupt-Webinterface |
-| NetBox | 8081 | IPAM/DCIM Webinterface |
+| NetBox | 8081 oder `/netbox/` | IPAM/DCIM Webinterface |
+
+> **Tipp:** Bei Verwendung eines Reverse Proxy (NPM, Traefik) ist NetBox auch ueber
+> `https://your-domain/netbox/` erreichbar - kein separater Port noetig.
 
 **Interne Services (nicht von aussen erreichbar):**
 - PostgreSQL (NetBox Datenbank)
@@ -352,19 +356,18 @@ Der Setup-Wizard konfiguriert automatisch:
 | **Backup** | Keins | `./data/` regelmaessig sichern |
 | **Updates** | Manuell | `docker compose pull && up -d` |
 
-### Bekannte Einschraenkungen
+### Cloud-Init Konfiguration
 
-> **Hinweis:** Einige Features sind aktuell fuer eine spezifische Homelab-Umgebung optimiert.
-> Bei Deployment in anderen Umgebungen:
+Ab **v0.2.43** sind alle Cloud-Init Einstellungen ueber die Web-UI konfigurierbar:
 
-| Feature | Status | Workaround |
-|---------|--------|------------|
-| Cloud-Init Phone-Home | Hardcodierte URL | Callback-URL im Backend anpassen |
-| Cloud-Init SSH-Keys | Hardcodiert | Keys in Cloud-Init Profilen anpassen |
-| Proxmox Node-Namen | "Mittelerde"-Theme | Funktioniert mit beliebigen Namen |
-| NAS Snippets-Pfad | Spezifisch | Storage-Pfad anpassen |
+| Einstellung | Ort | Beschreibung |
+|-------------|-----|--------------|
+| SSH Public Keys | Verwaltung > Cloud-Init | Keys fuer VM-Zugang |
+| Phone-Home URL | Verwaltung > Cloud-Init | Callback nach VM-Start |
+| Admin-Username | Verwaltung > Cloud-Init | Default-User in VMs |
+| NAS Snippets | Verwaltung > Cloud-Init | Pfad fuer Cloud-Init Dateien |
 
-Diese Einschraenkungen werden in zukuenftigen Versionen durch Konfigurationsoptionen ersetzt.
+Diese Einstellungen koennen auch im **Setup-Wizard** bei der Ersteinrichtung gesetzt werden.
 
 ### Systemanforderungen
 
