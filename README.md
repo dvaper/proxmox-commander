@@ -13,17 +13,50 @@ VM-Management-Plattform fuer Proxmox VE mit integriertem NetBox (IPAM/DCIM), Ans
 
 ## Voraussetzungen
 
-| Komponente | Mindestversion | Empfohlen |
-|------------|----------------|-----------|
-| Docker | 20.10 | 24.x |
-| Docker Compose | 2.0 | 2.20+ |
-| RAM | 4 GB | 8 GB |
+| Komponente | Minimum | Empfohlen |
+|------------|---------|-----------|
+| Docker | 20.10 | 24.x+ |
+| Docker Compose | v2.0 | v2.20+ |
+| RAM | 4 GB* | 8 GB |
 | Disk | 10 GB | 20 GB |
+
+*4 GB ist das absolute Minimum - NetBox kann bei wenig RAM langsam starten (bis zu 5 Min).
 
 **Proxmox VE Anforderungen:**
 - Proxmox VE 7.x oder 8.x
-- API-Token mit folgenden Berechtigungen: `VM.Allocate`, `VM.Clone`, `VM.Config.*`, `VM.Monitor`, `VM.Audit`, `Datastore.AllocateSpace`
-- SSH-Zugang zu den Nodes (fuer Cloud-Init Snippets)
+- API-Token mit folgenden Berechtigungen:
+
+| Berechtigung | Beschreibung |
+|--------------|--------------|
+| `VM.Allocate` | VMs erstellen |
+| `VM.Clone` | Templates klonen |
+| `VM.Config.Disk` | Disks konfigurieren |
+| `VM.Config.CPU` | CPU konfigurieren |
+| `VM.Config.Memory` | RAM konfigurieren |
+| `VM.Config.Network` | Netzwerk konfigurieren |
+| `VM.Config.Cloudinit` | Cloud-Init konfigurieren |
+| `VM.Config.Options` | VM-Optionen aendern |
+| `VM.PowerMgmt` | Start/Stop/Reboot |
+| `VM.Monitor` | Guest-Agent, Status |
+| `VM.Audit` | VM-Konfiguration lesen |
+| `VM.Snapshot` | Snapshots erstellen/loeschen |
+| `VM.Snapshot.Rollback` | Snapshot-Rollback |
+| `VM.Migrate` | VM-Migration |
+| `Datastore.AllocateSpace` | Disk-Speicher anlegen |
+| `Datastore.Audit` | Storage-Info lesen |
+| `Sys.Audit` | Cluster-Ressourcen lesen |
+
+**Empfohlene Rolle erstellen (Proxmox):**
+```bash
+pveum role add TerraformRole -privs "VM.Allocate VM.Clone VM.Config.Disk VM.Config.CPU VM.Config.Memory VM.Config.Network VM.Config.Cloudinit VM.Config.Options VM.PowerMgmt VM.Monitor VM.Audit VM.Snapshot VM.Snapshot.Rollback VM.Migrate Datastore.AllocateSpace Datastore.Audit Sys.Audit"
+pveum user add terraform@pve
+pveum aclmod / -user terraform@pve -role TerraformRole
+pveum user token add terraform@pve terraform-token --privsep=0
+```
+
+**Weitere Anforderungen:**
+- SSH-Zugang zu den Nodes (fuer Cloud-Init Snippets auf NAS)
+- Cloud-Init faehiges VM-Template
 
 ## Installation
 
