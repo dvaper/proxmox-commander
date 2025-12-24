@@ -96,6 +96,15 @@ async def run_migrations():
             except Exception as e:
                 logger.debug(f"Migration dark_mode fehlgeschlagen: {e}")
 
+        # Migration: sidebar_logo Spalte zu users hinzufügen (v0.2.34)
+        if "sidebar_logo" not in columns:
+            try:
+                logger.info("Migration: Füge sidebar_logo Spalte zu users hinzu...")
+                await conn.execute(text("ALTER TABLE users ADD COLUMN sidebar_logo VARCHAR(10) DEFAULT 'icon' NOT NULL"))
+                logger.info("Migration erfolgreich: sidebar_logo hinzugefügt")
+            except Exception as e:
+                logger.debug(f"Migration sidebar_logo fehlgeschlagen: {e}")
+
 
 async def create_default_admin():
     """Erstellt oder aktualisiert den Admin-User basierend auf Settings (fuer App-Start)"""
