@@ -473,7 +473,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import api from '@/api/client'
 
 // Settings
 const settings = ref({
@@ -568,7 +568,7 @@ onMounted(async () => {
 
 async function loadSettings() {
   try {
-    const response = await axios.get('/api/notifications/settings')
+    const response = await api.get('/api/notifications/settings')
     settings.value = { ...settings.value, ...response.data }
   } catch (e) {
     console.error('Fehler beim Laden der Einstellungen:', e)
@@ -577,7 +577,7 @@ async function loadSettings() {
 
 async function loadWebhooks() {
   try {
-    const response = await axios.get('/api/notifications/webhooks')
+    const response = await api.get('/api/notifications/webhooks')
     webhooks.value = response.data
   } catch (e) {
     console.error('Fehler beim Laden der Webhooks:', e)
@@ -587,7 +587,7 @@ async function loadWebhooks() {
 async function loadLog() {
   loadingLog.value = true
   try {
-    const response = await axios.get('/api/notifications/log?per_page=50')
+    const response = await api.get('/api/notifications/log?per_page=50')
     logEntries.value = response.data.items
   } catch (e) {
     console.error('Fehler beim Laden des Logs:', e)
@@ -598,7 +598,7 @@ async function loadLog() {
 
 async function saveSettings() {
   try {
-    await axios.put('/api/notifications/settings', {
+    await api.put('/api/notifications/settings', {
       smtp_enabled: settings.value.smtp_enabled,
       gotify_enabled: settings.value.gotify_enabled,
     })
@@ -623,7 +623,7 @@ async function saveSmtpSettings() {
     if (smtpPassword.value) {
       data.smtp_password = smtpPassword.value
     }
-    await axios.put('/api/notifications/settings', data)
+    await api.put('/api/notifications/settings', data)
     smtpPassword.value = ''
     await loadSettings()
     showSnackbar('SMTP-Einstellungen gespeichert')
@@ -645,7 +645,7 @@ async function saveGotifySettings() {
     if (gotifyToken.value) {
       data.gotify_token = gotifyToken.value
     }
-    await axios.put('/api/notifications/settings', data)
+    await api.put('/api/notifications/settings', data)
     gotifyToken.value = ''
     await loadSettings()
     showSnackbar('Gotify-Einstellungen gespeichert')
@@ -659,7 +659,7 @@ async function saveGotifySettings() {
 async function saveGeneralSettings() {
   savingGeneral.value = true
   try {
-    await axios.put('/api/notifications/settings', {
+    await api.put('/api/notifications/settings', {
       app_url: settings.value.app_url,
       password_reset_expiry_hours: settings.value.password_reset_expiry_hours,
     })
@@ -675,7 +675,7 @@ async function testSmtp() {
   testingSmtp.value = true
   smtpTestResult.value = null
   try {
-    const response = await axios.post('/api/notifications/settings/test-smtp')
+    const response = await api.post('/api/notifications/settings/test-smtp')
     smtpTestResult.value = response.data
   } catch (e) {
     smtpTestResult.value = {
@@ -691,7 +691,7 @@ async function testGotify() {
   testingGotify.value = true
   gotifyTestResult.value = null
   try {
-    const response = await axios.post('/api/notifications/settings/test-gotify')
+    const response = await api.post('/api/notifications/settings/test-gotify')
     gotifyTestResult.value = response.data
   } catch (e) {
     gotifyTestResult.value = {
@@ -731,10 +731,10 @@ async function saveWebhook() {
     if (!data.secret) delete data.secret
 
     if (editingWebhook.value) {
-      await axios.put(`/api/notifications/webhooks/${editingWebhook.value.id}`, data)
+      await api.put(`/api/notifications/webhooks/${editingWebhook.value.id}`, data)
       showSnackbar('Webhook aktualisiert')
     } else {
-      await axios.post('/api/notifications/webhooks', data)
+      await api.post('/api/notifications/webhooks', data)
       showSnackbar('Webhook erstellt')
     }
     webhookDialog.value = false
@@ -750,7 +750,7 @@ async function deleteWebhook(webhook) {
   if (!confirm(`Webhook "${webhook.name}" wirklich loeschen?`)) return
 
   try {
-    await axios.delete(`/api/notifications/webhooks/${webhook.id}`)
+    await api.delete(`/api/notifications/webhooks/${webhook.id}`)
     showSnackbar('Webhook geloescht')
     await loadWebhooks()
   } catch (e) {
@@ -760,7 +760,7 @@ async function deleteWebhook(webhook) {
 
 async function testWebhook(webhook) {
   try {
-    const response = await axios.post(`/api/notifications/webhooks/${webhook.id}/test`)
+    const response = await api.post(`/api/notifications/webhooks/${webhook.id}/test`)
     if (response.data.success) {
       showSnackbar(`Webhook "${webhook.name}" erfolgreich`)
     } else {

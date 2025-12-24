@@ -12,7 +12,9 @@ import { computed } from 'vue'
 import { useTheme } from 'vuetify'
 
 // Logo Assets
-import logoIcon from '@/assets/logo.svg'
+import logoIconWithBg from '@/assets/logo.svg'
+import logoIconLight from '@/assets/logo-icon-light.svg'
+import logoIconDark from '@/assets/logo-icon-dark.svg'
 import logoBannerLight from '@/assets/logo-banner-light.svg'
 import logoBannerDark from '@/assets/logo-banner-dark.svg'
 
@@ -37,6 +39,11 @@ const props = defineProps({
   customStyle: {
     type: Object,
     default: () => ({})
+  },
+  // Bei Icon-Variante: Mit Hexagon-Hintergrund oder transparent?
+  withBackground: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -48,11 +55,15 @@ const isDark = computed(() => {
   return themeName.endsWith('Dark')
 })
 
-// Logo-Quelle basierend auf Variante und Theme
+// Logo-Quelle basierend auf Variante, Theme und Background-Option
 const logoSrc = computed(() => {
   if (props.variant === 'icon') {
-    // Icon funktioniert auf beiden Themes (hat eigenen Hintergrund)
-    return logoIcon
+    // Mit Hintergrund: immer das gleiche Logo (hat eigenen blauen Hexagon)
+    if (props.withBackground) {
+      return logoIconWithBg
+    }
+    // Ohne Hintergrund: Theme-abhaengig
+    return isDark.value ? logoIconDark : logoIconLight
   }
   // Banner: Theme-abhaengig
   return isDark.value ? logoBannerDark : logoBannerLight

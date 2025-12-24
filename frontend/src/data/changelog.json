@@ -1,5 +1,19 @@
 [
   {
+    "version": "v0.2.31",
+    "date": "2025-12-24",
+    "changes": {
+      "Bugfixes": [
+        "Notifications: API-Client mit JWT-Token (401 Fehler behoben)",
+        "Setup-Wizard: Veraltete Restart-Meldung entfernt"
+      ],
+      "UI": [
+        "Logo: Theme-abhaengige Icon-Varianten (Hell/Dunkel)",
+        "Logo: Neuer withBackground Prop fuer Hexagon-Hintergrund"
+      ]
+    }
+  },
+  {
     "version": "v0.2.27",
     "date": "2025-12-24",
     "changes": {

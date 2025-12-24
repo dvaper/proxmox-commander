@@ -472,11 +472,10 @@
                     </tbody>
                   </v-table>
 
-                  <v-alert type="warning" variant="tonal" class="mt-4">
-                    <v-icon>mdi-restart</v-icon>
-                    Nach dem Speichern müssen die Container mit
-                    <code>docker compose down && docker compose up -d</code>
-                    neu gestartet werden (restart reicht nicht!).
+                  <v-alert type="info" variant="tonal" class="mt-4">
+                    <v-icon>mdi-information</v-icon>
+                    Die Konfiguration wird automatisch übernommen.
+                    Ein Container-Neustart ist <strong>nicht</strong> erforderlich.
                   </v-alert>
                 </v-card-text>
               </v-card>
