@@ -41,18 +41,51 @@ Dieses Dokument listet Features aus dem Referenzprojekt auf, die im Proxmox Comm
 ## Prioritaet 1: Kritische Fixes
 
 ### 1.1 VM-Loeschung robuster gestalten
-**Status:** Code vorhanden, muss getestet werden
+**Status:** ✅ Getestet und funktioniert (2025-12-24)
 
-Die `delete_vm_complete()` Methode existiert bereits und sollte:
+Die `delete_vm_complete()` Methode existiert und funktioniert:
 - [x] VM in Proxmox stoppen vor Loeschung
-- [x] NetBox VM-Eintrag loeschen
+- [x] NetBox VM-Eintrag loeschen (wenn vorhanden)
 - [x] NetBox IP freigeben
 - [x] Terraform State bereinigen
 - [x] TF-Datei loeschen
 - [x] Ansible Inventory bereinigen
 - [ ] Cloud-Init Snippet loeschen (NAS-unabhaengig machen)
 
-**Aktion:** Testen ob alle Schritte korrekt funktionieren
+---
+
+### 1.2 NetBox VM-Objekt beim Deployment erstellen
+**Status:** Offen
+
+Beim Terraform-Deployment wird aktuell nur die **IP-Adresse** in NetBox reserviert.
+Es sollte zusaetzlich ein **VM-Objekt** unter "Virtualization > Virtual Machines" erstellt werden.
+
+**Vorteile:**
+- Vollstaendige DCIM/IPAM-Integration
+- VM-Metadaten in NetBox sichtbar (CPU, RAM, Cluster, etc.)
+- IP-Adresse kann mit VM verknuepft werden
+- Bessere Uebersicht ueber alle verwalteten VMs
+
+**Zu implementieren:**
+- [ ] `netbox_service.create_vm()` Methode erweitern
+- [ ] Cluster/Site in NetBox automatisch erkennen oder konfigurierbar machen
+- [ ] VM-Objekt mit IP-Adresse verknuepfen
+- [ ] Bei VM-Loeschung: VM-Objekt mitloeschen (bereits vorbereitet)
+
+**API-Endpunkt:** `POST /api/virtualization/virtual-machines/`
+
+**Beispiel-Payload:**
+```json
+{
+  "name": "test-vm",
+  "cluster": 1,
+  "vcpus": 2,
+  "memory": 4096,
+  "disk": 32,
+  "status": "active",
+  "primary_ip4": 123
+}
+```
 
 ---
 
