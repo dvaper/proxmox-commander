@@ -111,6 +111,12 @@
             title="Benachrichtigungen"
             subtitle="E-Mail, Gotify, Webhooks"
           ></v-list-item>
+          <v-list-item
+            to="/settings/cloud-init"
+            prepend-icon="mdi-cloud-upload"
+            title="Cloud-Init"
+            subtitle="SSH-Keys, Admin-User"
+          ></v-list-item>
         </template>
       </v-list>
 
@@ -354,6 +360,7 @@ const pageTitles = {
   '/executions': 'Ausführungen',
   '/users': 'Benutzer',
   '/settings/notifications': 'Benachrichtigungen',
+  '/settings/cloud-init': 'Cloud-Init',
 }
 
 // Setup-Route erkennen (keine Navigation anzeigen)

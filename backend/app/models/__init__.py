@@ -17,6 +17,9 @@ from app.models.password_reset_token import PasswordResetToken
 from app.models.webhook import Webhook
 from app.models.notification_log import NotificationLog
 
+# Cloud-Init Settings
+from app.models.cloud_init_settings import CloudInitSettings
+
 __all__ = [
     "User",
     "UserGroupAccess",
@@ -32,4 +35,6 @@ __all__ = [
     "PasswordResetToken",
     "Webhook",
     "NotificationLog",
+    # Cloud-Init Settings
+    "CloudInitSettings",
 ]

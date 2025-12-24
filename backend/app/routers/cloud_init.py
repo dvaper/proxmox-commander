@@ -58,9 +58,11 @@ async def get_profile(
 
 @router.post("/generate")
 async def generate_cloud_init(
+    request: Request,
     hostname: str,
     profile: str = "basic",
     additional_packages: Optional[List[str]] = None,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -79,9 +81,14 @@ async def generate_cloud_init(
             detail=f"Ungueltiges Profil: {profile}"
         )
 
-    user_data = cloud_init_service.generate_user_data(
+    # Request-Host fuer auto-generierte Phone-Home URL
+    request_host = request.headers.get("host")
+
+    user_data = await cloud_init_service.generate_user_data(
         profile=profile_enum,
         hostname=hostname,
+        db=db,
+        request_host=request_host,
         additional_packages=additional_packages,
     )
 

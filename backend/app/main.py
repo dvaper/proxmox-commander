@@ -14,6 +14,7 @@ from app.routers import auth_router, inventory_router, playbooks_router, executi
 from app.routers.websocket import router as websocket_router
 from app.routers.notifications import router as notifications_router
 from app.routers.password_reset import router as password_reset_router
+from app.routers.cloud_init_settings import router as cloud_init_settings_router
 from app.services.inventory_sync_service import get_sync_service
 
 logger = logging.getLogger(__name__)
@@ -68,6 +69,7 @@ app.include_router(netbox_router)
 app.include_router(websocket_router)
 app.include_router(notifications_router)
 app.include_router(password_reset_router)
+app.include_router(cloud_init_settings_router)
 
 
 @app.get("/")

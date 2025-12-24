@@ -332,13 +332,8 @@ server_tokens off;
         ],
         "groups": [],
         "services": [],
-        "write_files": [
-            {
-                "path": "/etc/sudoers.d/ansible",
-                "content": "darthvaper ALL=(ALL) NOPASSWD:ALL\n",
-                "permissions": "0440",
-            },
-        ],
+        # Sudoers wird automatisch durch den Admin-User konfiguriert
+        # (siehe generate_user_data: "sudo": "ALL=(ALL) NOPASSWD:ALL")
         "sysctl": {},
     },
 }

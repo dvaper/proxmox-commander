@@ -256,26 +256,29 @@ module "{module_name}" {{
         cloud_init_ref = ""
         if config.cloud_init_profile:
             try:
-                # Cloud-Init YAML mit korrektem Hostname generieren
-                profile = CloudInitProfile(config.cloud_init_profile) if isinstance(config.cloud_init_profile, str) else config.cloud_init_profile
-                cloud_init_yaml = cloud_init_service.generate_user_data(
-                    profile=profile,
-                    hostname=config.name,
-                    enable_phone_home=True,
-                )
+                async with async_session() as db:
+                    # Cloud-Init YAML mit korrektem Hostname generieren
+                    profile = CloudInitProfile(config.cloud_init_profile) if isinstance(config.cloud_init_profile, str) else config.cloud_init_profile
+                    cloud_init_yaml = await cloud_init_service.generate_user_data(
+                        profile=profile,
+                        hostname=config.name,
+                        db=db,
+                        enable_phone_home=True,
+                    )
 
-                # Auf NAS schreiben (verwende gandalf als Standard-Node)
-                success = await cloud_init_service.write_snippet_to_nas(
-                    vm_name=config.name,
-                    content=cloud_init_yaml,
-                    proxmox_node="gandalf",
-                )
+                    # Auf NAS schreiben (verwende gandalf als Standard-Node)
+                    success = await cloud_init_service.write_snippet_to_nas(
+                        vm_name=config.name,
+                        content=cloud_init_yaml,
+                        proxmox_node="gandalf",
+                        db=db,
+                    )
 
-                if success:
-                    cloud_init_ref = cloud_init_service.get_snippet_proxmox_ref(config.name)
-                    print(f"Cloud-Init fuer {config.name} erstellt: {cloud_init_ref}")
-                else:
-                    print(f"Warnung: Cloud-Init konnte nicht auf NAS geschrieben werden, verwende Standard")
+                    if success:
+                        cloud_init_ref = await cloud_init_service.get_snippet_proxmox_ref(config.name, db=db)
+                        print(f"Cloud-Init fuer {config.name} erstellt: {cloud_init_ref}")
+                    else:
+                        print(f"Warnung: Cloud-Init konnte nicht auf NAS geschrieben werden, verwende Standard")
             except Exception as e:
                 print(f"Fehler bei Cloud-Init Generierung: {e}")
 

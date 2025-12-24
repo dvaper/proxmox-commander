@@ -122,6 +122,12 @@ const routes = [
     component: () => import('@/views/NotificationSettingsView.vue'),
     meta: { requiresAuth: true, requiresSuperAdmin: true },
   },
+  {
+    path: '/settings/cloud-init',
+    name: 'CloudInitSettings',
+    component: () => import('@/views/CloudInitSettingsView.vue'),
+    meta: { requiresAuth: true, requiresSuperAdmin: true },
+  },
 ]
 
 const router = createRouter({

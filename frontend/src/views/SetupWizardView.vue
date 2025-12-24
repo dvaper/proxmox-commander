@@ -417,6 +417,95 @@
                         </div>
                       </v-expansion-panel-text>
                     </v-expansion-panel>
+
+                    <!-- Cloud-Init -->
+                    <v-expansion-panel value="cloudinit">
+                      <v-expansion-panel-title>
+                        <v-icon class="mr-2" size="small">mdi-cloud-upload</v-icon>
+                        Cloud-Init Konfiguration
+                      </v-expansion-panel-title>
+                      <v-expansion-panel-text>
+                        <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+                          Cloud-Init konfiguriert neue VMs automatisch mit SSH-Zugang und Grundeinstellungen.
+                          Diese Werte werden als Defaults fuer alle neuen VMs verwendet.
+                        </v-alert>
+
+                        <v-text-field
+                          v-model="config.cloud_init_admin_username"
+                          label="Admin-Benutzername"
+                          prepend-inner-icon="mdi-account"
+                          hint="Benutzername der auf neuen VMs erstellt wird (Standard: ansible)"
+                          persistent-hint
+                          variant="outlined"
+                          density="compact"
+                          class="mb-4"
+                        ></v-text-field>
+
+                        <v-text-field
+                          v-model="config.cloud_init_admin_gecos"
+                          label="Admin GECOS (Vollstaendiger Name)"
+                          prepend-inner-icon="mdi-card-account-details"
+                          hint="Angezeigter Name des Benutzers (z.B. 'Homelab Admin')"
+                          persistent-hint
+                          variant="outlined"
+                          density="compact"
+                          class="mb-4"
+                        ></v-text-field>
+
+                        <v-textarea
+                          v-model="config.cloud_init_ssh_keys_text"
+                          label="SSH Authorized Keys"
+                          prepend-inner-icon="mdi-key"
+                          hint="Ein SSH Public Key pro Zeile (ssh-ed25519 oder ssh-rsa ...)"
+                          persistent-hint
+                          variant="outlined"
+                          density="compact"
+                          rows="3"
+                          class="mb-4"
+                          placeholder="ssh-ed25519 AAAA... user@host"
+                        ></v-textarea>
+
+                        <v-checkbox
+                          v-model="config.cloud_init_phone_home_enabled"
+                          label="Phone-Home Callback aktivieren"
+                          hint="VMs melden sich nach der Erstellung beim Server"
+                          persistent-hint
+                          density="compact"
+                          class="mb-4"
+                        ></v-checkbox>
+
+                        <v-divider class="my-4"></v-divider>
+
+                        <div class="text-subtitle-2 mb-2">NAS Snippets (optional)</div>
+                        <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+                          Falls Cloud-Init Snippets auf einem NAS gespeichert werden sollen,
+                          gib hier den Pfad und die Proxmox Storage-Referenz an.
+                        </v-alert>
+
+                        <v-text-field
+                          v-model="config.cloud_init_nas_snippets_path"
+                          label="NAS Snippets Pfad"
+                          prepend-inner-icon="mdi-folder-network"
+                          placeholder="/mnt/pve/nas/snippets"
+                          hint="Pfad zum Snippets-Verzeichnis auf dem Proxmox-Node"
+                          persistent-hint
+                          variant="outlined"
+                          density="compact"
+                          class="mb-4"
+                        ></v-text-field>
+
+                        <v-text-field
+                          v-model="config.cloud_init_nas_snippets_ref"
+                          label="Proxmox Storage-Referenz"
+                          prepend-inner-icon="mdi-database"
+                          placeholder="nas:snippets"
+                          hint="Storage-Referenz fuer cicustom (z.B. nas:snippets)"
+                          persistent-hint
+                          variant="outlined"
+                          density="compact"
+                        ></v-text-field>
+                      </v-expansion-panel-text>
+                    </v-expansion-panel>
                   </v-expansion-panels>
                 </v-card-text>
               </v-card>
@@ -610,6 +699,13 @@ const config = ref({
   netbox_admin_user: 'admin',
   netbox_admin_password: '',
   netbox_admin_email: 'admin@example.com',
+  // Cloud-Init Einstellungen
+  cloud_init_admin_username: 'ansible',
+  cloud_init_admin_gecos: 'Homelab Admin',
+  cloud_init_ssh_keys_text: '',  // Textarea: Ein Key pro Zeile
+  cloud_init_phone_home_enabled: true,
+  cloud_init_nas_snippets_path: '',
+  cloud_init_nas_snippets_ref: '',
 })
 
 // NetBox Mode: 'integrated', 'external', 'none'
@@ -757,6 +853,14 @@ async function saveConfig() {
   }
   // Bei 'none': beide bleiben null
 
+  // Cloud-Init SSH Keys: Textarea zu Array konvertieren
+  const cloudInitSshKeys = config.value.cloud_init_ssh_keys_text
+    ? config.value.cloud_init_ssh_keys_text
+        .split('\n')
+        .map(key => key.trim())
+        .filter(key => key.startsWith('ssh-'))
+    : []
+
   try {
     // force=true erlaubt das erneute Ausfuehren des Setups (fuer Tests)
     const response = await axios.post('/api/setup/save?force=true', {
@@ -776,6 +880,13 @@ async function saveConfig() {
       netbox_admin_user: netboxAdminUser,
       netbox_admin_password: netboxAdminPassword,
       netbox_admin_email: netboxAdminEmail,
+      // Cloud-Init
+      cloud_init_admin_username: config.value.cloud_init_admin_username,
+      cloud_init_admin_gecos: config.value.cloud_init_admin_gecos,
+      cloud_init_ssh_keys: cloudInitSshKeys,
+      cloud_init_phone_home_enabled: config.value.cloud_init_phone_home_enabled,
+      cloud_init_nas_snippets_path: config.value.cloud_init_nas_snippets_path || null,
+      cloud_init_nas_snippets_ref: config.value.cloud_init_nas_snippets_ref || null,
     })
 
     // Prüfen ob Konfiguration direkt geladen wurde (kein Restart nötig)

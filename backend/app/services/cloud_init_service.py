@@ -1,33 +1,37 @@
 """
 Cloud-Init Service - Generiert Cloud-Init User-Data fuer VMs
+
+Die Konfiguration (SSH-Keys, Phone-Home URL, Admin-Username) wird aus der
+Datenbank geladen (CloudInitSettings). Fallback-Defaults werden verwendet,
+wenn keine DB-Session verfuegbar ist.
 """
 import yaml
 import subprocess
 import tempfile
 import os
+import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from pathlib import Path
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.schemas.cloud_init import CloudInitProfile, CLOUD_INIT_PROFILES
+from app.services.cloud_init_settings_service import CloudInitSettingsService
+
+logger = logging.getLogger(__name__)
 
 
 class CloudInitService:
     """Service fuer Cloud-Init Konfiguration"""
 
-    # Standard SSH-Key fuer Ansible-Zugang
-    DEFAULT_SSH_KEYS = [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGeyOtZW2jHFE0BqiCB0XKAjeWxhXK85M1rsXGGnjua3 darthvaper@newsxc.net",
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDDy9NmiGWdAN6nY2qpx9bS0KJ7GszxSjcCp1ilf4nK/ ansible-control@homelab",
-    ]
-
-    # Ansible Commander URL fuer Phone-Home
-    PHONE_HOME_URL = "http://192.168.60.133:8000/api/cloud-init/callback"
-
-    # NAS Snippets Pfad (via Proxmox gemounted)
-    NAS_SNIPPETS_PATH = "/mnt/pve/nas/snippets"
-    # Proxmox-Referenz fuer cicustom
-    NAS_SNIPPETS_REF = "nas:snippets"
+    # Fallback-Defaults (nur wenn DB nicht verfuegbar)
+    FALLBACK_SSH_KEYS: List[str] = []
+    FALLBACK_ADMIN_USERNAME = "ansible"
+    FALLBACK_ADMIN_GECOS = "Homelab Admin"
+    FALLBACK_PHONE_HOME_URL: Optional[str] = None
+    FALLBACK_NAS_SNIPPETS_PATH: Optional[str] = None
+    FALLBACK_NAS_SNIPPETS_REF: Optional[str] = None
 
     def get_profiles(self) -> List[Dict[str, Any]]:
         """Gibt alle verfuegbaren Profile zurueck"""
@@ -59,10 +63,12 @@ class CloudInitService:
             }
         return None
 
-    def generate_user_data(
+    async def generate_user_data(
         self,
         profile: CloudInitProfile,
         hostname: str,
+        db: Optional[AsyncSession] = None,
+        request_host: Optional[str] = None,
         additional_packages: Optional[List[str]] = None,
         additional_ssh_keys: Optional[List[str]] = None,
         additional_runcmd: Optional[List[str]] = None,
@@ -74,6 +80,8 @@ class CloudInitService:
         Args:
             profile: Das zu verwendende Cloud-Init Profil
             hostname: Hostname der VM
+            db: Datenbank-Session (fuer Settings aus DB)
+            request_host: Host aus HTTP-Request (fuer auto-generierte Phone-Home URL)
             additional_packages: Zusaetzliche Pakete
             additional_ssh_keys: Zusaetzliche SSH-Keys
             additional_runcmd: Zusaetzliche Befehle nach dem Boot
@@ -84,6 +92,20 @@ class CloudInitService:
         """
         if profile == CloudInitProfile.NONE or not profile:
             return ""
+
+        # Settings aus DB laden oder Fallbacks verwenden
+        if db:
+            settings_service = CloudInitSettingsService(db)
+            ssh_keys = await settings_service.get_ssh_keys()
+            admin_username = await settings_service.get_admin_username()
+            admin_gecos = await settings_service.get_admin_gecos()
+            phone_home_url = await settings_service.get_phone_home_url(request_host) if enable_phone_home else None
+        else:
+            logger.warning("Keine DB-Session - verwende Fallback-Defaults fuer Cloud-Init")
+            ssh_keys = list(self.FALLBACK_SSH_KEYS)
+            admin_username = self.FALLBACK_ADMIN_USERNAME
+            admin_gecos = self.FALLBACK_ADMIN_GECOS
+            phone_home_url = self.FALLBACK_PHONE_HOME_URL
 
         profile_key = profile.value if isinstance(profile, CloudInitProfile) else profile
         profile_info = CLOUD_INIT_PROFILES.get(profile_key, {})
@@ -100,10 +122,10 @@ class CloudInitService:
             "package_upgrade": True,
         }
 
-        # SSH-Keys
-        ssh_keys = list(self.DEFAULT_SSH_KEYS)
+        # SSH-Keys (aus Settings + zusaetzliche)
+        all_ssh_keys = list(ssh_keys)
         if additional_ssh_keys:
-            ssh_keys.extend(additional_ssh_keys)
+            all_ssh_keys.extend(additional_ssh_keys)
 
         # User-Gruppen basierend auf Profil
         user_groups = ["sudo", "users", "adm", "systemd-journal"]
@@ -113,13 +135,13 @@ class CloudInitService:
 
         user_data["users"] = [
             {
-                "name": "darthvaper",
-                "gecos": "Homelab Admin",
+                "name": admin_username,
+                "gecos": admin_gecos,
                 "groups": user_groups,
                 "shell": "/bin/bash",
                 "sudo": "ALL=(ALL) NOPASSWD:ALL",
                 "lock_passwd": True,
-                "ssh_authorized_keys": ssh_keys,
+                "ssh_authorized_keys": all_ssh_keys,
             }
         ]
 
@@ -151,7 +173,7 @@ class CloudInitService:
         write_files = []
 
         # Login Welcome Script (profile.d) - zeigt Last Login + Banner bei jedem Login
-        welcome_script = '''#!/bin/bash
+        welcome_script = f'''#!/bin/bash
 # Login Welcome - Ansible Commander
 # Wird bei jedem Login ausgefuehrt
 
@@ -165,8 +187,8 @@ clear
 # Zweite Zeile = vorheriger Login (erste Zeile ist aktueller)
 LAST_INFO=$(last -2 -F $USER 2>/dev/null | sed -n '2p')
 if [ -n "$LAST_INFO" ] && [[ "$LAST_INFO" != *"wtmpdb begins"* ]]; then
-    LAST_IP=$(echo "$LAST_INFO" | awk '{print $3}')
-    LAST_DATE=$(echo "$LAST_INFO" | awk '{print $4, $5, $6, $7, $8}')
+    LAST_IP=$(echo "$LAST_INFO" | awk '{{print $3}}')
+    LAST_DATE=$(echo "$LAST_INFO" | awk '{{print $4, $5, $6, $7, $8}}')
 
     # Falls IP ein tty ist, als "console" anzeigen
     if [[ "$LAST_IP" == pts/* ]] || [[ "$LAST_IP" == tty* ]]; then
@@ -187,8 +209,8 @@ cat << EOF
 ===============================================
 
 Hostname: $(hostname)
-System:   ${PRETTY_NAME}
-Admin:    darthvaper
+System:   ${{PRETTY_NAME}}
+Admin:    {admin_username}
 
 Useful commands:
   htop          - Process monitor
@@ -275,8 +297,8 @@ EOF
             runcmd.extend(additional_runcmd)
 
         # Phone Home Callback
-        if enable_phone_home:
-            phone_home_cmd = f'''curl -sf -X POST "{self.PHONE_HOME_URL}" \\
+        if enable_phone_home and phone_home_url:
+            phone_home_cmd = f'''curl -sf -X POST "{phone_home_url}" \\
   -H "Content-Type: application/json" \\
   -d '{{"hostname": "$(hostname)", "instance_id": "$(cat /var/lib/cloud/data/instance-id 2>/dev/null || echo unknown)", "ip_address": "$(hostname -I | awk '{{print $1}}')", "status": "completed", "timestamp": "$(date -Iseconds)"}}' \\
   || echo "Phone-home callback failed"'''
@@ -286,9 +308,9 @@ EOF
             user_data["runcmd"] = runcmd
 
         # Phone Home (natives Cloud-Init Modul als Backup)
-        if enable_phone_home:
+        if enable_phone_home and phone_home_url:
             user_data["phone_home"] = {
-                "url": self.PHONE_HOME_URL,
+                "url": phone_home_url,
                 "post": ["instance_id", "hostname", "fqdn"],
                 "tries": 3,
             }
@@ -300,13 +322,16 @@ EOF
         yaml_content = yaml.dump(user_data, default_flow_style=False, allow_unicode=True, sort_keys=False)
         return f"#cloud-config\n{yaml_content}"
 
-    def generate_merged_config(
+    async def generate_merged_config(
         self,
         profiles: List[CloudInitProfile],
         hostname: str,
+        db: Optional[AsyncSession] = None,
+        request_host: Optional[str] = None,
         additional_packages: Optional[List[str]] = None,
         additional_ssh_keys: Optional[List[str]] = None,
         additional_runcmd: Optional[List[str]] = None,
+        enable_phone_home: bool = True,
     ) -> str:
         """
         Generiert Cloud-Init Config durch Zusammenfuehren mehrerer Profile.
@@ -314,13 +339,30 @@ EOF
         Args:
             profiles: Liste von Profilen die kombiniert werden sollen
             hostname: Hostname der VM
+            db: Datenbank-Session (fuer Settings aus DB)
+            request_host: Host aus HTTP-Request (fuer auto-generierte Phone-Home URL)
             additional_packages: Zusaetzliche Pakete
             additional_ssh_keys: Zusaetzliche SSH-Keys
             additional_runcmd: Zusaetzliche Befehle
+            enable_phone_home: Phone-Home Callback aktivieren
 
         Returns:
             Kombinierte Cloud-Init User-Data als YAML-String
         """
+        # Settings aus DB laden oder Fallbacks verwenden
+        if db:
+            settings_service = CloudInitSettingsService(db)
+            ssh_keys = await settings_service.get_ssh_keys()
+            admin_username = await settings_service.get_admin_username()
+            admin_gecos = await settings_service.get_admin_gecos()
+            phone_home_url = await settings_service.get_phone_home_url(request_host) if enable_phone_home else None
+        else:
+            logger.warning("Keine DB-Session - verwende Fallback-Defaults fuer Cloud-Init (merged)")
+            ssh_keys = list(self.FALLBACK_SSH_KEYS)
+            admin_username = self.FALLBACK_ADMIN_USERNAME
+            admin_gecos = self.FALLBACK_ADMIN_GECOS
+            phone_home_url = self.FALLBACK_PHONE_HOME_URL
+
         merged_packages = set()
         merged_groups = set(["sudo", "users", "adm", "systemd-journal"])
         merged_services = set()
@@ -358,20 +400,20 @@ EOF
             "package_upgrade": True,
         }
 
-        # SSH Keys
-        ssh_keys = list(self.DEFAULT_SSH_KEYS)
+        # SSH Keys (aus Settings + zusaetzliche)
+        all_ssh_keys = list(ssh_keys)
         if additional_ssh_keys:
-            ssh_keys.extend(additional_ssh_keys)
+            all_ssh_keys.extend(additional_ssh_keys)
 
         user_data["users"] = [
             {
-                "name": "darthvaper",
-                "gecos": "Homelab Admin",
+                "name": admin_username,
+                "gecos": admin_gecos,
                 "groups": list(merged_groups),
                 "shell": "/bin/bash",
                 "sudo": "ALL=(ALL) NOPASSWD:ALL",
                 "lock_passwd": True,
-                "ssh_authorized_keys": ssh_keys,
+                "ssh_authorized_keys": all_ssh_keys,
             }
         ]
 
@@ -393,7 +435,7 @@ EOF
         write_files = list(merged_write_files)
 
         # Login Welcome Script (profile.d) - zeigt Last Login + Banner bei jedem Login
-        welcome_script = '''#!/bin/bash
+        welcome_script = f'''#!/bin/bash
 # Login Welcome - Ansible Commander
 # Wird bei jedem Login ausgefuehrt
 
@@ -407,8 +449,8 @@ clear
 # Zweite Zeile = vorheriger Login (erste Zeile ist aktueller)
 LAST_INFO=$(last -2 -F $USER 2>/dev/null | sed -n '2p')
 if [ -n "$LAST_INFO" ] && [[ "$LAST_INFO" != *"wtmpdb begins"* ]]; then
-    LAST_IP=$(echo "$LAST_INFO" | awk '{print $3}')
-    LAST_DATE=$(echo "$LAST_INFO" | awk '{print $4, $5, $6, $7, $8}')
+    LAST_IP=$(echo "$LAST_INFO" | awk '{{print $3}}')
+    LAST_DATE=$(echo "$LAST_INFO" | awk '{{print $4, $5, $6, $7, $8}}')
 
     # Falls IP ein tty ist, als "console" anzeigen
     if [[ "$LAST_IP" == pts/* ]] || [[ "$LAST_IP" == tty* ]]; then
@@ -429,8 +471,8 @@ cat << EOF
 ===============================================
 
 Hostname: $(hostname)
-System:   ${PRETTY_NAME}
-Admin:    darthvaper
+System:   ${{PRETTY_NAME}}
+Admin:    {admin_username}
 
 Useful commands:
   htop          - Process monitor
@@ -491,21 +533,24 @@ EOF
         if additional_runcmd:
             runcmd.extend(additional_runcmd)
 
-        # Phone Home
-        phone_home_cmd = f'''curl -sf -X POST "{self.PHONE_HOME_URL}" \\
+        # Phone Home Callback
+        if enable_phone_home and phone_home_url:
+            phone_home_cmd = f'''curl -sf -X POST "{phone_home_url}" \\
   -H "Content-Type: application/json" \\
   -d '{{"hostname": "$(hostname)", "instance_id": "$(cat /var/lib/cloud/data/instance-id 2>/dev/null || echo unknown)", "ip_address": "$(hostname -I | awk '{{print $1}}')", "status": "completed", "timestamp": "$(date -Iseconds)"}}' \\
   || echo "Phone-home callback failed"'''
-        runcmd.append(phone_home_cmd)
+            runcmd.append(phone_home_cmd)
 
         if runcmd:
             user_data["runcmd"] = runcmd
 
-        user_data["phone_home"] = {
-            "url": self.PHONE_HOME_URL,
-            "post": ["instance_id", "hostname", "fqdn"],
-            "tries": 3,
-        }
+        # Phone Home (natives Cloud-Init Modul als Backup)
+        if enable_phone_home and phone_home_url:
+            user_data["phone_home"] = {
+                "url": phone_home_url,
+                "post": ["instance_id", "hostname", "fqdn"],
+                "tries": 3,
+            }
 
         profile_names = ", ".join([p.value for p in profiles if p != CloudInitProfile.NONE])
         user_data["final_message"] = f"Cloud-Init completed for {hostname} with profiles: {profile_names}"
@@ -517,15 +562,38 @@ EOF
         """Gibt den Dateinamen fuer einen VM-spezifischen Cloud-Init Snippet zurueck"""
         return f"cloud-init-{vm_name}.yaml"
 
-    def get_snippet_proxmox_ref(self, vm_name: str) -> str:
-        """Gibt die Proxmox-Referenz fuer einen VM-spezifischen Cloud-Init Snippet zurueck"""
-        return f"{self.NAS_SNIPPETS_REF}/{self.get_snippet_filename(vm_name)}"
+    async def get_snippet_proxmox_ref(
+        self,
+        vm_name: str,
+        db: Optional[AsyncSession] = None,
+    ) -> Optional[str]:
+        """
+        Gibt die Proxmox-Referenz fuer einen VM-spezifischen Cloud-Init Snippet zurueck.
+
+        Args:
+            vm_name: Name der VM
+            db: Datenbank-Session (fuer Settings aus DB)
+
+        Returns:
+            Proxmox-Referenz (z.B. "nas:snippets/cloud-init-vm.yaml") oder None wenn nicht konfiguriert
+        """
+        if db:
+            settings_service = CloudInitSettingsService(db)
+            nas_config = await settings_service.get_nas_snippets_config()
+            nas_ref = nas_config.get("ref")
+            if nas_ref:
+                return f"{nas_ref}/{self.get_snippet_filename(vm_name)}"
+        elif self.FALLBACK_NAS_SNIPPETS_REF:
+            return f"{self.FALLBACK_NAS_SNIPPETS_REF}/{self.get_snippet_filename(vm_name)}"
+
+        return None
 
     async def write_snippet_to_nas(
         self,
         vm_name: str,
         content: str,
-        proxmox_node: str = "gandalf",
+        proxmox_node: str,
+        db: Optional[AsyncSession] = None,
     ) -> bool:
         """
         Schreibt einen Cloud-Init Snippet auf das NAS via SSH zum Proxmox-Node.
@@ -534,12 +602,25 @@ EOF
             vm_name: Name der VM (wird fuer Dateiname verwendet)
             content: Cloud-Init YAML Inhalt
             proxmox_node: Proxmox-Node mit NAS-Zugriff
+            db: Datenbank-Session (fuer Settings aus DB)
 
         Returns:
             True bei Erfolg, False bei Fehler
         """
+        # NAS-Pfad aus Settings laden
+        if db:
+            settings_service = CloudInitSettingsService(db)
+            nas_config = await settings_service.get_nas_snippets_config()
+            nas_path = nas_config.get("path")
+        else:
+            nas_path = self.FALLBACK_NAS_SNIPPETS_PATH
+
+        if not nas_path:
+            logger.warning("NAS Snippets-Pfad nicht konfiguriert - ueberspringe Snippet-Upload")
+            return False
+
         filename = self.get_snippet_filename(vm_name)
-        remote_path = f"{self.NAS_SNIPPETS_PATH}/{filename}"
+        remote_path = f"{nas_path}/{filename}"
 
         try:
             # Schreibe Content in temporaere Datei
@@ -564,20 +645,21 @@ EOF
             os.unlink(temp_path)
 
             if result.returncode != 0:
-                print(f"SCP Fehler: {result.stderr}")
+                logger.error(f"SCP Fehler: {result.stderr}")
                 return False
 
-            print(f"Cloud-Init Snippet {filename} erfolgreich auf NAS geschrieben")
+            logger.info(f"Cloud-Init Snippet {filename} erfolgreich auf NAS geschrieben")
             return True
 
         except Exception as e:
-            print(f"Fehler beim Schreiben des Cloud-Init Snippets: {e}")
+            logger.error(f"Fehler beim Schreiben des Cloud-Init Snippets: {e}")
             return False
 
     async def delete_snippet_from_nas(
         self,
         vm_name: str,
-        proxmox_node: str = "gandalf",
+        proxmox_node: str,
+        db: Optional[AsyncSession] = None,
     ) -> bool:
         """
         Loescht einen Cloud-Init Snippet vom NAS.
@@ -585,12 +667,25 @@ EOF
         Args:
             vm_name: Name der VM
             proxmox_node: Proxmox-Node mit NAS-Zugriff
+            db: Datenbank-Session (fuer Settings aus DB)
 
         Returns:
             True bei Erfolg oder wenn Datei nicht existiert
         """
+        # NAS-Pfad aus Settings laden
+        if db:
+            settings_service = CloudInitSettingsService(db)
+            nas_config = await settings_service.get_nas_snippets_config()
+            nas_path = nas_config.get("path")
+        else:
+            nas_path = self.FALLBACK_NAS_SNIPPETS_PATH
+
+        if not nas_path:
+            logger.warning("NAS Snippets-Pfad nicht konfiguriert - ueberspringe Snippet-Loeschung")
+            return True  # Kein Fehler, nur nicht konfiguriert
+
         filename = self.get_snippet_filename(vm_name)
-        remote_path = f"{self.NAS_SNIPPETS_PATH}/{filename}"
+        remote_path = f"{nas_path}/{filename}"
 
         try:
             node_ip = self._get_node_ip(proxmox_node)
@@ -606,14 +701,14 @@ EOF
             result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=30)
 
             if result.returncode != 0:
-                print(f"SSH Fehler beim Loeschen: {result.stderr}")
+                logger.error(f"SSH Fehler beim Loeschen: {result.stderr}")
                 return False
 
-            print(f"Cloud-Init Snippet {filename} vom NAS geloescht")
+            logger.info(f"Cloud-Init Snippet {filename} vom NAS geloescht")
             return True
 
         except Exception as e:
-            print(f"Fehler beim Loeschen des Cloud-Init Snippets: {e}")
+            logger.error(f"Fehler beim Loeschen des Cloud-Init Snippets: {e}")
             return False
 
     def _get_node_ip(self, node_name: str) -> str:

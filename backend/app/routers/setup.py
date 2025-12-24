@@ -73,6 +73,32 @@ class SetupConfig(BaseModel):
     default_ssh_user: str = "ansible"
     ansible_remote_user: str = "ansible"
 
+    # Cloud-Init Einstellungen (optional)
+    cloud_init_admin_username: str = Field(
+        default="ansible",
+        description="Admin-Benutzername fuer Cloud-Init erstellte VMs"
+    )
+    cloud_init_admin_gecos: str = Field(
+        default="Homelab Admin",
+        description="Admin GECOS-String (Vollstaendiger Name)"
+    )
+    cloud_init_ssh_keys: Optional[list[str]] = Field(
+        default=None,
+        description="SSH Authorized Keys fuer Cloud-Init (ein Key pro Eintrag)"
+    )
+    cloud_init_phone_home_enabled: bool = Field(
+        default=True,
+        description="Phone-Home Callback aktivieren"
+    )
+    cloud_init_nas_snippets_path: Optional[str] = Field(
+        default=None,
+        description="Pfad zum NAS Snippets Verzeichnis (z.B. /mnt/pve/nas/snippets)"
+    )
+    cloud_init_nas_snippets_ref: Optional[str] = Field(
+        default=None,
+        description="Proxmox Storage-Referenz (z.B. nas:snippets)"
+    )
+
 
 class SetupSaveResult(BaseModel):
     """Ergebnis des Setup-Speicherns"""
@@ -597,7 +623,8 @@ async def save_setup(config: SetupConfig, force: bool = False):
 
     # Settings neu laden (Hot-Reload via SettingsProxy)
     from app.config import reload_settings
-    from app.database import ensure_admin_exists
+    from app.database import ensure_admin_exists, async_session
+    from app.services.cloud_init_settings_service import get_cloud_init_settings_service
     try:
         reload_settings(str(get_env_file_path()))
         logger.info("Settings wurden nach Setup neu geladen (Hot-Reload)")
@@ -618,6 +645,23 @@ async def save_setup(config: SetupConfig, force: bool = False):
             logger.error(f"Admin-User Fehler: {admin_result.get('message')}")
             result.restart_required = True
             result.message = "Konfiguration gespeichert, aber Admin-Erstellung fehlgeschlagen. Bitte Container neu starten."
+
+        # Cloud-Init Settings in DB speichern
+        try:
+            async with async_session() as db:
+                cloud_init_service = get_cloud_init_settings_service(db)
+                await cloud_init_service.update_settings(
+                    ssh_keys=config.cloud_init_ssh_keys or [],
+                    phone_home_enabled=config.cloud_init_phone_home_enabled,
+                    admin_username=config.cloud_init_admin_username,
+                    admin_gecos=config.cloud_init_admin_gecos,
+                    nas_snippets_path=config.cloud_init_nas_snippets_path,
+                    nas_snippets_ref=config.cloud_init_nas_snippets_ref,
+                )
+                logger.info("Cloud-Init Settings in DB gespeichert")
+        except Exception as e:
+            logger.warning(f"Cloud-Init Settings konnten nicht gespeichert werden: {e}")
+            # Kein Fehler - Setup kann trotzdem erfolgreich sein
 
     except Exception as e:
         logger.warning(f"Hot-Reload fehlgeschlagen: {e} - Container-Restart erforderlich")
