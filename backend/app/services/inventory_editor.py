@@ -539,6 +539,61 @@ class InventoryEditor:
 
         return True, f"Host '{host_name}' aus Gruppe '{group_name}' entfernt"
 
+    def update_host_var(self, host_name: str, var_name: str, var_value: any) -> Tuple[bool, str]:
+        """
+        Aktualisiert eine Variable eines Hosts.
+
+        Sucht den Host in allen Gruppen und aktualisiert die Variable
+        dort, wo der Host mit Variablen definiert ist (nicht nur Referenz).
+
+        Args:
+            host_name: Name des Hosts
+            var_name: Name der Variable (z.B. pve_node)
+            var_value: Neuer Wert der Variable
+
+        Returns:
+            Tuple[bool, str]: (Erfolg, Nachricht)
+        """
+        if self._data is None:
+            self.load()
+
+        # Host mit Variablen finden
+        host_data = self._find_host_with_vars(host_name)
+        if host_data is None:
+            return False, f"Host '{host_name}' nicht gefunden oder hat keine Variablen"
+
+        old_value = host_data.get(var_name)
+        host_data[var_name] = var_value
+
+        return True, f"Host '{host_name}': {var_name} aktualisiert ({old_value} -> {var_value})"
+
+    def _find_host_with_vars(self, host_name: str, current: dict = None) -> Optional[dict]:
+        """
+        Findet einen Host und gibt dessen Variablen-Dict zurueck.
+
+        Sucht nur Hosts, die mit Variablen definiert sind (nicht nur Referenzen).
+        """
+        if current is None:
+            current = self._data.get("all", {})
+
+        if isinstance(current, dict):
+            # Hosts in dieser Gruppe pruefen
+            if "hosts" in current and current["hosts"]:
+                if host_name in current["hosts"]:
+                    host_data = current["hosts"][host_name]
+                    # Nur wenn es ein Dict ist (hat Variablen)
+                    if isinstance(host_data, dict):
+                        return host_data
+
+            # Rekursiv in Children suchen
+            if "children" in current and current["children"]:
+                for child_data in current["children"].values():
+                    result = self._find_host_with_vars(host_name, child_data or {})
+                    if result is not None:
+                        return result
+
+        return None
+
     def get_host_groups(self, host_name: str) -> List[str]:
         """
         Gibt alle Gruppen zurück, in denen ein Host ist.
@@ -657,6 +712,7 @@ class InventoryEditor:
 
         Erstellt/aktualisiert Gruppen wie pve_gandalf, pve_frodo, etc.
         und weist Hosts basierend auf ihrem pve_node Attribut zu.
+        Entfernt auch Hosts aus Node-Gruppen, wenn sie migriert wurden.
 
         Returns:
             Tuple[bool, str, dict]: (Erfolg, Nachricht, Details)
@@ -669,10 +725,14 @@ class InventoryEditor:
         self._collect_hosts_by_node("all", self._data.get("all", {}), node_hosts)
 
         if not node_hosts:
-            return True, "Keine Hosts mit pve_node Attribut gefunden", {"created": [], "updated": []}
+            return True, "Keine Hosts mit pve_node Attribut gefunden", {"created": [], "updated": [], "removed": []}
 
         created_groups = []
         updated_groups = []
+        removed_from_groups = []
+
+        # Alle pve_* Gruppen sammeln
+        all_pve_groups = self._find_all_pve_groups()
 
         # Für jeden Node eine Gruppe erstellen/aktualisieren
         for node_name, host_list in node_hosts.items():
@@ -702,9 +762,39 @@ class InventoryEditor:
                 if hosts_added and group_name not in created_groups:
                     updated_groups.append(group_name)
 
+        # Hosts aus falschen Node-Gruppen entfernen (nach Migration)
+        all_hosts_with_nodes = {}
+        for node_name, host_list in node_hosts.items():
+            for host_name in host_list:
+                all_hosts_with_nodes[host_name] = node_name
+
+        for pve_group_name in all_pve_groups:
+            group = self._find_group(pve_group_name)
+            if group is None or "hosts" not in group or group["hosts"] is None:
+                continue
+
+            # Node-Name aus Gruppenname extrahieren (pve_gandalf -> gandalf)
+            expected_node = pve_group_name[4:]  # Entfernt "pve_"
+
+            # Hosts pruefen und falsche entfernen
+            hosts_to_remove = []
+            for host_name in list(group["hosts"].keys()):
+                actual_node = all_hosts_with_nodes.get(host_name)
+                if actual_node and actual_node != expected_node:
+                    hosts_to_remove.append(host_name)
+
+            for host_name in hosts_to_remove:
+                del group["hosts"][host_name]
+                removed_from_groups.append({
+                    "host": host_name,
+                    "old_group": pve_group_name,
+                    "new_group": f"pve_{all_hosts_with_nodes[host_name]}"
+                })
+
         details = {
             "created": created_groups,
             "updated": updated_groups,
+            "removed": removed_from_groups,
             "node_hosts": {k: len(v) for k, v in node_hosts.items()}
         }
 
@@ -713,8 +803,28 @@ class InventoryEditor:
             message_parts.append(f"{len(created_groups)} Gruppe(n) erstellt")
         if updated_groups:
             message_parts.append(f"{len(updated_groups)} Gruppe(n) aktualisiert")
+        if removed_from_groups:
+            message_parts.append(f"{len(removed_from_groups)} Host(s) umgezogen")
 
-        return True, ", ".join(message_parts) if message_parts else "Keine Änderungen", details
+        return True, ", ".join(message_parts) if message_parts else "Keine Aenderungen", details
+
+    def _find_all_pve_groups(self) -> List[str]:
+        """Findet alle Gruppen die mit 'pve_' beginnen"""
+        pve_groups = []
+        self._collect_pve_groups("all", self._data.get("all", {}), pve_groups)
+        return pve_groups
+
+    def _collect_pve_groups(self, group_name: str, group_data: dict, result: List[str]):
+        """Sammelt alle pve_* Gruppen rekursiv"""
+        if not isinstance(group_data, dict):
+            return
+
+        if group_name.startswith("pve_"):
+            result.append(group_name)
+
+        if "children" in group_data and group_data["children"]:
+            for child_name, child_data in group_data["children"].items():
+                self._collect_pve_groups(child_name, child_data or {}, result)
 
     def _collect_hosts_by_node(self, group_name: str, group_data: dict, result: Dict[str, List[str]]):
         """Sammelt Hosts gruppiert nach pve_node"""

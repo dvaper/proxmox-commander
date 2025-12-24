@@ -45,6 +45,7 @@ class InventorySyncService:
             "proxmox_vms": 0,
             "inventory_hosts": 0,
             "added": [],
+            "updated": [],
             "skipped": [],
             "errors": []
         }
@@ -74,6 +75,8 @@ class InventorySyncService:
             parser = InventoryParser(settings.ansible_inventory_path)
             existing_hosts = parser.get_hosts()
             existing_hostnames = {h.name for h in existing_hosts}
+            # Mapping von Hostname zu aktuellem pve_node
+            existing_host_nodes = {h.name: h.pve_node for h in existing_hosts if h.pve_node}
             details["inventory_hosts"] = len(existing_hostnames)
 
             # VMs vergleichen und fehlende hinzufügen
@@ -106,7 +109,23 @@ class InventorySyncService:
 
                 # Prüfen ob Host bereits existiert
                 if vm_name in existing_hostnames:
-                    details["skipped"].append(vm_name)
+                    # Pruefen ob pve_node aktualisiert werden muss
+                    current_node = existing_host_nodes.get(vm_name)
+                    if current_node and current_node != vm_node:
+                        # Node hat sich geaendert (VM wurde migriert)
+                        success, msg = editor.update_host_var(vm_name, "pve_node", vm_node)
+                        if success:
+                            details["updated"].append({
+                                "name": vm_name,
+                                "old_node": current_node,
+                                "new_node": vm_node,
+                                "vmid": vmid
+                            })
+                            logger.info(f"VM '{vm_name}' wurde von {current_node} nach {vm_node} migriert - Inventory aktualisiert")
+                        else:
+                            details["errors"].append(f"{vm_name}: Node-Update fehlgeschlagen: {msg}")
+                    else:
+                        details["skipped"].append(vm_name)
                     continue
 
                 # IP-Adresse ermitteln (verschiedene Methoden)
@@ -170,30 +189,51 @@ class InventorySyncService:
                     details["errors"].append(f"{vm_name}: {str(e)}")
 
             # Speichern wenn Änderungen vorhanden
-            if details["added"]:
-                # Gruppe "proxmox_discovered" erstellen falls nicht vorhanden
-                if not editor._find_group("proxmox_discovered"):
+            has_changes = details["added"] or details["updated"]
+            if has_changes:
+                # Gruppe "proxmox_discovered" erstellen falls nicht vorhanden (nur bei neuen Hosts)
+                if details["added"] and not editor._find_group("proxmox_discovered"):
                     editor.create_group("proxmox_discovered", parent="all")
 
+                # Commit-Message erstellen
+                commit_parts = []
+                if details["added"]:
+                    commit_parts.append(f"{len(details['added'])} VM(s) hinzugefuegt")
+                if details["updated"]:
+                    commit_parts.append(f"{len(details['updated'])} VM(s) migriert")
+
                 success, msg = editor.save(
-                    commit_message=f"Auto-Sync: {len(details['added'])} VM(s) aus Proxmox hinzugefügt",
+                    commit_message=f"Auto-Sync: {', '.join(commit_parts)}",
                     username="system"
                 )
                 if not success:
                     return False, f"Speichern fehlgeschlagen: {msg}", details
+
+                # Nach Aenderungen auch die Node-Gruppen aktualisieren
+                if details["updated"]:
+                    editor.load()  # Neu laden nach save
+                    sync_success, sync_msg, sync_details = editor.sync_proxmox_node_groups()
+                    if sync_success and (sync_details.get("removed") or sync_details.get("updated")):
+                        editor.save(
+                            commit_message=f"Auto-Sync: Node-Gruppen aktualisiert nach VM-Migration",
+                            username="system"
+                        )
+                        logger.info(f"Node-Gruppen aktualisiert: {sync_msg}")
 
             self.last_sync = datetime.now()
 
             # Zusammenfassung erstellen
             msg_parts = []
             if details["added"]:
-                msg_parts.append(f"{len(details['added'])} hinzugefügt")
+                msg_parts.append(f"{len(details['added'])} hinzugefuegt")
+            if details["updated"]:
+                msg_parts.append(f"{len(details['updated'])} migriert")
             if details["skipped"]:
-                msg_parts.append(f"{len(details['skipped'])} übersprungen")
+                msg_parts.append(f"{len(details['skipped'])} uebersprungen")
             if details["errors"]:
                 msg_parts.append(f"{len(details['errors'])} Fehler")
 
-            message = ", ".join(msg_parts) if msg_parts else "Keine Änderungen"
+            message = ", ".join(msg_parts) if msg_parts else "Keine Aenderungen"
             return True, message, details
 
         except Exception as e:
