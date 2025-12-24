@@ -1,5 +1,15 @@
 [
   {
+    "version": "v0.2.21",
+    "date": "2025-12-24",
+    "changes": {
+      "Bugfixes": [
+        "Migration: Fehlende theme-Spalte wird automatisch hinzugefuegt",
+        "Setup: Ungueltige .env-Zeilen (ohne =) werden ignoriert statt kopiert"
+      ]
+    }
+  },
+  {
     "version": "v0.2.20",
     "date": "2025-12-24",
     "changes": {
