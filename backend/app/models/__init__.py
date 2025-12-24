@@ -10,6 +10,13 @@ from app.models.execution_log import ExecutionLog
 from app.models.vm_template import VMTemplate
 from app.models.vm_history import VMHistory
 
+# Benachrichtigungs-Models
+from app.models.notification_settings import NotificationSettings
+from app.models.user_notification_preferences import UserNotificationPreferences
+from app.models.password_reset_token import PasswordResetToken
+from app.models.webhook import Webhook
+from app.models.notification_log import NotificationLog
+
 __all__ = [
     "User",
     "UserGroupAccess",
@@ -19,4 +26,10 @@ __all__ = [
     "ExecutionLog",
     "VMTemplate",
     "VMHistory",
+    # Benachrichtigungs-Models
+    "NotificationSettings",
+    "UserNotificationPreferences",
+    "PasswordResetToken",
+    "Webhook",
+    "NotificationLog",
 ]

@@ -12,8 +12,9 @@
       <v-card-text>
         <v-tabs v-model="tab" bg-color="transparent">
           <v-tab value="profile">Profil</v-tab>
+          <v-tab value="notifications">Benachrichtigungen</v-tab>
           <v-tab value="access">Berechtigungen</v-tab>
-          <v-tab value="password">Passwort ändern</v-tab>
+          <v-tab value="password">Passwort</v-tab>
         </v-tabs>
 
         <v-window v-model="tab" class="mt-4">
@@ -116,6 +117,112 @@
             <div class="text-caption text-grey mt-2">
               Einstellungen werden sofort angewendet und gespeichert.
             </div>
+          </v-window-item>
+
+          <!-- Tab: Benachrichtigungen -->
+          <v-window-item value="notifications">
+            <div v-if="loadingNotifPrefs" class="text-center py-4">
+              <v-progress-circular indeterminate size="32"></v-progress-circular>
+            </div>
+
+            <template v-else>
+              <!-- Kanaele -->
+              <div class="text-subtitle-1 mb-3">
+                <v-icon start>mdi-broadcast</v-icon>
+                Kanaele
+              </div>
+
+              <v-switch
+                v-model="notifPrefs.email_enabled"
+                label="E-Mail-Benachrichtigungen"
+                :hint="authStore.user?.email || 'Keine E-Mail hinterlegt'"
+                persistent-hint
+                density="compact"
+                color="primary"
+                class="mb-2"
+                @update:model-value="saveNotifPrefs"
+              ></v-switch>
+
+              <v-switch
+                v-model="notifPrefs.gotify_enabled"
+                label="Gotify Push-Benachrichtigungen"
+                hint="Erfordert globale Gotify-Konfiguration durch Admin"
+                persistent-hint
+                density="compact"
+                color="primary"
+                class="mb-4"
+                @update:model-value="saveNotifPrefs"
+              ></v-switch>
+
+              <v-divider class="my-4"></v-divider>
+
+              <!-- Ereignisse -->
+              <div class="text-subtitle-1 mb-3">
+                <v-icon start>mdi-bell</v-icon>
+                Ereignisse
+              </div>
+
+              <v-row>
+                <v-col cols="12" sm="6">
+                  <div class="text-caption text-grey mb-2">VMs</div>
+                  <v-checkbox
+                    v-model="notifPrefs.notify_vm_created"
+                    label="VM erstellt"
+                    density="compact"
+                    hide-details
+                    @update:model-value="saveNotifPrefs"
+                  ></v-checkbox>
+                  <v-checkbox
+                    v-model="notifPrefs.notify_vm_deleted"
+                    label="VM geloescht"
+                    density="compact"
+                    hide-details
+                    @update:model-value="saveNotifPrefs"
+                  ></v-checkbox>
+                  <v-checkbox
+                    v-model="notifPrefs.notify_vm_state_change"
+                    label="VM Status-Aenderung"
+                    density="compact"
+                    hide-details
+                    @update:model-value="saveNotifPrefs"
+                  ></v-checkbox>
+                </v-col>
+                <v-col cols="12" sm="6">
+                  <div class="text-caption text-grey mb-2">Ansible & System</div>
+                  <v-checkbox
+                    v-model="notifPrefs.notify_ansible_completed"
+                    label="Playbook erfolgreich"
+                    density="compact"
+                    hide-details
+                    @update:model-value="saveNotifPrefs"
+                  ></v-checkbox>
+                  <v-checkbox
+                    v-model="notifPrefs.notify_ansible_failed"
+                    label="Playbook fehlgeschlagen"
+                    density="compact"
+                    hide-details
+                    @update:model-value="saveNotifPrefs"
+                  ></v-checkbox>
+                  <v-checkbox
+                    v-model="notifPrefs.notify_system_alerts"
+                    label="System-Warnungen"
+                    density="compact"
+                    hide-details
+                    @update:model-value="saveNotifPrefs"
+                  ></v-checkbox>
+                </v-col>
+              </v-row>
+
+              <v-alert
+                v-if="notifPrefsSaved"
+                type="success"
+                variant="tonal"
+                density="compact"
+                class="mt-4"
+              >
+                Einstellungen gespeichert
+              </v-alert>
+            </template>
           </v-window-item>
 
           <!-- Tab: Berechtigungen -->
@@ -242,10 +349,11 @@
 </template>
 
 <script setup>
-import { ref, inject } from 'vue'
+import { ref, inject, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils/formatting'
+import axios from 'axios'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -258,6 +366,58 @@ const saving = ref(false)
 const savingPrefs = ref(false)
 const selectedTheme = ref('')
 const selectedDarkMode = ref('')
+
+// Benachrichtigungspraeferenzen
+const loadingNotifPrefs = ref(false)
+const notifPrefsSaved = ref(false)
+const notifPrefs = ref({
+  email_enabled: true,
+  gotify_enabled: false,
+  notify_vm_created: true,
+  notify_vm_deleted: true,
+  notify_vm_state_change: false,
+  notify_ansible_completed: true,
+  notify_ansible_failed: true,
+  notify_system_alerts: true,
+})
+
+// Benachrichtigungspraeferenzen laden wenn Tab gewechselt wird
+watch(tab, async (newTab) => {
+  if (newTab === 'notifications' && !loadingNotifPrefs.value) {
+    await loadNotifPrefs()
+  }
+})
+
+async function loadNotifPrefs() {
+  loadingNotifPrefs.value = true
+  try {
+    const response = await axios.get('/api/notifications/preferences')
+    notifPrefs.value = {
+      email_enabled: response.data.email_enabled,
+      gotify_enabled: response.data.gotify_enabled,
+      notify_vm_created: response.data.notify_vm_created,
+      notify_vm_deleted: response.data.notify_vm_deleted,
+      notify_vm_state_change: response.data.notify_vm_state_change,
+      notify_ansible_completed: response.data.notify_ansible_completed,
+      notify_ansible_failed: response.data.notify_ansible_failed,
+      notify_system_alerts: response.data.notify_system_alerts,
+    }
+  } catch (e) {
+    console.error('Fehler beim Laden der Benachrichtigungspraeferenzen:', e)
+  } finally {
+    loadingNotifPrefs.value = false
+  }
+}
+
+async function saveNotifPrefs() {
+  try {
+    await axios.put('/api/notifications/preferences', notifPrefs.value)
+    notifPrefsSaved.value = true
+    setTimeout(() => { notifPrefsSaved.value = false }, 2000)
+  } catch (e) {
+    showSnackbar('Fehler beim Speichern', 'error')
+  }
+}
 
 // Verfuegbare Themes
 const themes = [

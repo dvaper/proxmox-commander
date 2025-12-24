@@ -46,7 +46,10 @@
 
           <v-divider></v-divider>
 
-          <v-card-actions>
+          <v-card-actions class="justify-space-between">
+            <router-link to="/forgot-password" class="text-caption text-primary">
+              Passwort vergessen?
+            </router-link>
             <v-btn
               variant="text"
               size="small"

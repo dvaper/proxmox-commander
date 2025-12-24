@@ -47,3 +47,18 @@ class User(Base):
         lazy="selectin"
     )
     executions = relationship("Execution", back_populates="user")
+
+    # Benachrichtigungs-Relationships
+    notification_preferences = relationship(
+        "UserNotificationPreferences",
+        back_populates="user",
+        uselist=False,  # One-to-One
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )
+    password_reset_tokens = relationship(
+        "PasswordResetToken",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )

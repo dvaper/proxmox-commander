@@ -77,6 +77,12 @@
             title="Benutzer"
             subtitle="Benutzer & Rollen"
           ></v-list-item>
+          <v-list-item
+            to="/settings/notifications"
+            prepend-icon="mdi-bell-cog"
+            title="Benachrichtigungen"
+            subtitle="E-Mail, Gotify, Webhooks"
+          ></v-list-item>
         </template>
       </v-list>
 
@@ -318,6 +324,7 @@ const pageTitles = {
   '/inventory': 'Inventory',
   '/executions': 'Ausführungen',
   '/users': 'Benutzer',
+  '/settings/notifications': 'Benachrichtigungen',
 }
 
 // Setup-Route erkennen (keine Navigation anzeigen)

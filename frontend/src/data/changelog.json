@@ -1,5 +1,22 @@
 [
   {
+    "version": "v0.2.24",
+    "date": "2025-12-24",
+    "changes": {
+      "Features": [
+        "Benachrichtigungs-System: E-Mail (SMTP), Gotify und Webhooks",
+        "Passwort-Reset: Link per E-Mail anfordern und zuruecksetzen",
+        "Admin-UI: Benachrichtigungseinstellungen unter Verwaltung",
+        "Benutzer-Praeferenzen: Ereignis-Benachrichtigungen im Profil konfigurieren",
+        "Webhooks: HMAC-Signatur, Event-Filter, Status-Tracking"
+      ],
+      "Sicherheit": [
+        "Verschluesselte Speicherung von SMTP-Passwoertern und API-Tokens",
+        "Rate-Limiting fuer Passwort-Reset Anfragen"
+      ]
+    }
+  },
+  {
     "version": "v0.2.23",
     "date": "2025-12-24",
     "changes": {
