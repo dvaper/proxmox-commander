@@ -1,12 +1,17 @@
 <template>
   <v-container class="fill-height" fluid>
     <v-row align="center" justify="center">
-      <v-col cols="12" sm="8" md="4">
+      <v-col cols="12" sm="8" md="5" lg="4">
+        <!-- Logo Banner ueber dem Login-Formular -->
+        <div class="d-flex justify-center mb-6">
+          <AppLogo variant="banner" size="md" />
+        </div>
+
         <v-card class="elevation-12">
-          <v-toolbar color="primary" dark flat>
-            <img :src="logoSrc" alt="Logo" class="login-logo ml-4" />
-            <v-toolbar-title>Proxmox Commander</v-toolbar-title>
-          </v-toolbar>
+          <v-card-title class="text-center py-4">
+            <v-icon class="mr-2">mdi-login</v-icon>
+            Anmelden
+          </v-card-title>
 
           <v-card-text>
             <v-form @submit.prevent="handleLogin">
@@ -47,7 +52,7 @@
 
           <v-divider></v-divider>
 
-          <v-card-actions class="justify-space-between">
+          <v-card-actions class="justify-space-between px-4 py-3">
             <router-link to="/forgot-password" class="text-caption text-primary">
               Passwort vergessen?
             </router-link>
@@ -68,12 +73,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import logoWithBg from '@/assets/logo.svg'
-
-const logoSrc = computed(() => logoWithBg)
+import AppLogo from '@/components/AppLogo.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -120,11 +123,3 @@ async function initAdmin() {
   }
 }
 </script>
-
-<style scoped>
-.login-logo {
-  width: 36px;
-  height: 36px;
-  margin-right: 8px;
-}
-</style>

@@ -4,7 +4,7 @@
     <v-navigation-drawer v-if="authStore.isAuthenticated && !isSetupRoute" v-model="drawer" app>
       <v-list-item>
         <template v-slot:prepend>
-          <img :src="logoSrc" alt="Logo" class="app-logo" />
+          <AppLogo variant="icon" size="md" class="mr-3" />
         </template>
         <v-list-item-title>Proxmox Commander</v-list-item-title>
         <v-list-item-subtitle>
@@ -226,10 +226,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 import ProfileDialog from '@/components/ProfileDialog.vue'
+import AppLogo from '@/components/AppLogo.vue'
 import changelog from '@/data/changelog.json'
 import axios from 'axios'
-import logoWithBg from '@/assets/logo.svg'
-import logoAdaptive from '@/assets/logo-adaptive.svg'
 
 const appVersion = __APP_VERSION__
 
@@ -239,10 +238,6 @@ const authStore = useAuthStore()
 const theme = useTheme()
 
 const drawer = ref(true)
-
-// Logo basierend auf Theme auswaehlen
-// Das Logo mit Hintergrund funktioniert auf beiden, aber das adaptive sieht cleaner aus
-const logoSrc = computed(() => logoWithBg)
 
 // Theme bei Aenderung anwenden (kombiniert Farbschema + Dark Mode)
 watch([() => authStore.currentTheme, () => authStore.currentDarkMode], ([newTheme, newDarkMode]) => {
@@ -381,11 +376,5 @@ const logout = () => {
 <style>
 html {
   overflow-y: auto !important;
-}
-
-.app-logo {
-  width: 40px;
-  height: 40px;
-  margin-right: 12px;
 }
 </style>

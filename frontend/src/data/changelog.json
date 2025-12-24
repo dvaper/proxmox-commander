@@ -1,5 +1,17 @@
 [
   {
+    "version": "v0.2.27",
+    "date": "2025-12-24",
+    "changes": {
+      "UI": [
+        "AppLogo-Komponente: Icon- und Banner-Variante mit Theme-Erkennung",
+        "Login/Reset-Seiten: Vollstaendiges Logo-Banner mit App-Name und Tagline",
+        "Sidebar: Kompaktes Icon-Logo im Header",
+        "Dark/Light Mode: Automatische Anpassung der Banner-Textfarben"
+      ]
+    }
+  },
+  {
     "version": "v0.2.26",
     "date": "2025-12-24",
     "changes": {

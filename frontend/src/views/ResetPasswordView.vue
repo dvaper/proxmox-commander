@@ -1,7 +1,12 @@
 <template>
   <v-container class="fill-height" fluid>
     <v-row align="center" justify="center">
-      <v-col cols="12" sm="8" md="4">
+      <v-col cols="12" sm="8" md="5" lg="4">
+        <!-- Logo Banner -->
+        <div class="d-flex justify-center mb-6">
+          <AppLogo variant="banner" size="sm" />
+        </div>
+
         <v-card elevation="12" class="pa-4">
           <v-card-title class="text-h5 text-center mb-4">
             <v-icon size="48" color="primary" class="mb-2">mdi-lock-reset</v-icon>
@@ -127,6 +132,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
+import AppLogo from '@/components/AppLogo.vue'
 
 const route = useRoute()
 
