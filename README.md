@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo-banner.svg" alt="Proxmox Commander" width="600">
+  <img src="docs/logo-banner.svg" alt="Proxmox Commander" width="480">
 </p>
 
 <p align="center">
