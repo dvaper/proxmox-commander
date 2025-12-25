@@ -4,7 +4,7 @@ services:
   # =============================================================================
 
   dpc-web:
-    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/dpc-web:latest
+    image: ghcr.io/dvaper/proxmox-commander/dpc-web:${VERSION:-latest}
     container_name: proxmox-commander-web
     restart: unless-stopped
     ports:
@@ -17,7 +17,7 @@ services:
       - proxmox-commander
 
   dpc-api:
-    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/dpc-api:latest
+    image: ghcr.io/dvaper/proxmox-commander/dpc-api:${VERSION:-latest}
     container_name: proxmox-commander-api
     restart: unless-stopped
     depends_on:
@@ -62,11 +62,10 @@ services:
   # =============================================================================
 
   netbox:
-    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/netbox:v4.0
+    image: netboxcommunity/netbox:${NETBOX_VERSION:-v4.0}
     container_name: proxmox-commander-netbox
     restart: unless-stopped
-    # Port 8081 nur noch für direkten Zugriff (optional)
-    # NetBox ist auch über /netbox/ im Frontend erreichbar
+    # Port 8081 fuer direkten Zugriff auf NetBox UI
     ports:
       - "${NETBOX_PORT:-8081}:8080"
     depends_on:
@@ -96,7 +95,7 @@ services:
       - proxmox-commander
 
   netbox-worker:
-    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/netbox:v4.0
+    image: netboxcommunity/netbox:${NETBOX_VERSION:-v4.0}
     container_name: proxmox-commander-netbox-worker
     restart: unless-stopped
     depends_on:
@@ -119,7 +118,7 @@ services:
       - proxmox-commander
 
   netbox-housekeeping:
-    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/netbox:v4.0
+    image: netboxcommunity/netbox:${NETBOX_VERSION:-v4.0}
     container_name: proxmox-commander-netbox-housekeeping
     restart: unless-stopped
     depends_on:
@@ -142,7 +141,7 @@ services:
   # =============================================================================
 
   postgres:
-    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/postgres:16-alpine
+    image: postgres:16-alpine
     container_name: proxmox-commander-postgres
     restart: unless-stopped
     environment:
@@ -161,7 +160,7 @@ services:
       - proxmox-commander
 
   redis:
-    image: registry.newsxc.net/darthvaper/docker-proxmox-commander/redis:7-alpine
+    image: redis:7-alpine
     container_name: proxmox-commander-redis
     restart: unless-stopped
     command: redis-server --appendonly yes
