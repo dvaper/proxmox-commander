@@ -142,64 +142,172 @@ pveum user token add terraform@pve terraform-token --privsep=0
 
 ## Installation
 
-### Quick Start (Empfohlen)
+### Variante 1: Quick Start (lokaler Test)
+
+Fuer schnelle Tests auf einem System mit Docker:
 
 ```bash
 mkdir proxmox-commander && cd proxmox-commander
 curl -LO https://raw.githubusercontent.com/dvaper/proxmox-commander/main/docker-compose.yml
 docker compose up -d
-# Browser: http://<server-ip>:8080/setup
+# Browser: http://localhost:8080/setup
 ```
 
-### Vollstaendiges Repository klonen
+---
 
+### Variante 2: Installation auf einer VM (Empfohlen fuer Produktion)
+
+Diese Anleitung beschreibt die Installation auf einer dedizierten Linux-VM.
+
+#### Schritt 1: VM vorbereiten
+
+**Empfohlene VM-Konfiguration:**
+
+| Ressource | Minimum | Empfohlen |
+|-----------|---------|-----------|
+| OS | Debian 12/13, Ubuntu 22.04/24.04 | Debian 13 |
+| CPU | 2 Cores | 4 Cores |
+| RAM | 4 GB | 8 GB |
+| Disk | 20 GB | 40 GB |
+| Netzwerk | Statische IP | VLAN-faehig |
+
+#### Schritt 2: Docker installieren
+
+**Debian/Ubuntu:**
 ```bash
-git clone https://github.com/dvaper/proxmox-commander.git
-cd proxmox-commander
+# System aktualisieren
+sudo apt update && sudo apt upgrade -y
+
+# Docker-Abhaengigkeiten
+sudo apt install -y ca-certificates curl gnupg
+
+# Docker GPG Key
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+# Docker Repository (Debian)
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Docker installieren
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# User zur docker-Gruppe hinzufuegen (Neuanmeldung erforderlich!)
+sudo usermod -aG docker $USER
 ```
 
-**Optional: .env.example kopieren**
+**Docker-Installation pruefen (nach Neuanmeldung):**
 ```bash
-curl -LO https://raw.githubusercontent.com/dvaper/proxmox-commander/main/.env.example
-cp .env.example .env
+docker --version        # Erwartung: Docker version 24.x oder hoeher
+docker compose version  # Erwartung: Docker Compose version v2.20 oder hoeher
 ```
 
-### 2. Container starten
+#### Schritt 3: Anwendungsverzeichnis erstellen
 
 ```bash
+# Verzeichnis erstellen
+sudo mkdir -p /opt/proxmox-commander
+sudo chown $USER:$USER /opt/proxmox-commander
+cd /opt/proxmox-commander
+
+# docker-compose.yml herunterladen
+curl -LO https://raw.githubusercontent.com/dvaper/proxmox-commander/main/docker-compose.yml
+```
+
+#### Schritt 4: Container starten
+
+```bash
+cd /opt/proxmox-commander
 docker compose up -d
 ```
 
 **Erster Start dauert laenger** - NetBox muss initialisiert werden (ca. 2-5 Minuten).
 
-### 3. Setup-Wizard durchfuehren
+**Start-Fortschritt pruefen:**
+```bash
+# Container-Status
+docker compose ps
+
+# Logs verfolgen (Abbruch mit Ctrl+C)
+docker compose logs -f
+
+# Warten bis "Application startup complete" erscheint
+docker compose logs dpc-api | grep -i "startup complete"
+```
+
+#### Schritt 5: Setup-Wizard durchfuehren
 
 Oeffne im Browser:
 ```
-http://<server-ip>:8080/setup
+http://<vm-ip>:8080/setup
 ```
 
 Der Setup-Wizard fragt folgende Informationen ab:
 
 | Schritt | Erforderlich | Beschreibung |
 |---------|--------------|--------------|
-| Proxmox Host | Ja | URL zum Proxmox-Server (z.B. `https://proxmox.local:8006`) |
+| Proxmox Host | Ja | URL zum Proxmox-Server (z.B. `https://192.168.1.10:8006`) |
 | Proxmox Token ID | Ja | Format: `user@realm!token-name` |
 | Proxmox Token Secret | Ja | Das API-Token Secret |
 | SSL verifizieren | Optional | Bei selbstsignierten Zertifikaten: Nein |
 | SSH User | Ja | User fuer Ansible (z.B. `ansible`) |
 | App-Admin User | Ja | Benutzername fuer die App |
-| App-Admin Passwort | Ja | Mindestens 6 Zeichen |
+| App-Admin Passwort | Ja | Mindestens 8 Zeichen |
 | App-Admin E-Mail | Optional | E-Mail-Adresse |
 
-### 4. Login
+#### Schritt 6: Login
 
 Nach dem Setup-Wizard:
 ```
-http://<server-ip>:8080
+http://<vm-ip>:8080
 ```
 
 Login mit den im Wizard angegebenen Credentials.
+
+---
+
+### Variante 3: Mit Reverse Proxy (SSL/TLS)
+
+Fuer Produktivbetrieb empfohlen: Nginx Proxy Manager, Traefik oder Nginx als Reverse Proxy.
+
+**Beispiel: Nginx Proxy Manager**
+
+1. Neuen Proxy Host erstellen:
+   - Domain: `proxmox-commander.example.com`
+   - Forward Hostname: `<vm-ip>`
+   - Forward Port: `8080`
+   - SSL: Let's Encrypt oder eigenes Zertifikat
+
+2. Fuer NetBox separaten Proxy Host:
+   - Domain: `netbox.example.com`
+   - Forward Port: `8081`
+
+3. **Wichtig bei NetBox ueber Reverse Proxy:**
+
+   CSRF-Origins in `docker-compose.yml` anpassen:
+   ```yaml
+   netbox:
+     environment:
+       - CSRF_TRUSTED_ORIGINS=https://netbox.example.com
+   ```
+
+   Danach Container neu starten:
+   ```bash
+   docker compose up -d netbox
+   ```
+
+---
+
+### Repository klonen (Entwicklung)
+
+Fuer Entwicklung oder eigene Anpassungen:
+
+```bash
+git clone https://github.com/dvaper/proxmox-commander.git
+cd proxmox-commander
+docker compose up -d
+```
 
 ## Ports und Services
 
@@ -370,62 +478,7 @@ flowchart TB
 | **Terraform** | bpg/proxmox Provider | VM-Provisioning |
 | **Ansible** | Built-in | Konfigurationsmanagement |
 
-## Deployment in eigene Umgebung
-
-### Schnellstart (Empfohlen)
-
-Die einfachste Methode fuer eine neue Umgebung:
-
-```bash
-# 1. Nur docker-compose.yml herunterladen
-mkdir proxmox-commander && cd proxmox-commander
-curl -LO https://raw.githubusercontent.com/dvaper/proxmox-commander/main/docker-compose.yml
-
-# 2. Container starten
-docker compose up -d
-
-# 3. Setup-Wizard durchfuehren
-# Browser: http://<server-ip>:8080/setup
-```
-
-Der Setup-Wizard konfiguriert automatisch:
-- Proxmox API-Verbindung
-- Admin-Benutzer und Passwort
-- NetBox Integration
-- Terraform Provider
-
-### Anpassungen fuer Produktivbetrieb
-
-| Aspekt | Standard | Empfehlung |
-|--------|----------|------------|
-| **Secrets** | Auto-generiert | In `.env` persistent speichern |
-| **Reverse Proxy** | Direkt :8080/:8081 | Nginx/Traefik mit SSL davor |
-| **Backup** | Keins | `./data/` regelmaessig sichern |
-| **Updates** | Manuell | `docker compose pull && up -d` |
-
-### Cloud-Init Konfiguration
-
-Ab **v0.2.43** sind alle Cloud-Init Einstellungen ueber die Web-UI konfigurierbar:
-
-| Einstellung | Ort | Beschreibung |
-|-------------|-----|--------------|
-| SSH Public Keys | Verwaltung > Cloud-Init | Keys fuer VM-Zugang |
-| Phone-Home URL | Verwaltung > Cloud-Init | Callback nach VM-Start |
-| Admin-Username | Verwaltung > Cloud-Init | Default-User in VMs |
-| NAS Snippets | Verwaltung > Cloud-Init | Pfad fuer Cloud-Init Dateien |
-
-Diese Einstellungen koennen auch im **Setup-Wizard** bei der Ersteinrichtung gesetzt werden.
-
-### Systemanforderungen
-
-| Ressource | Minimum | Empfohlen | Hinweis |
-|-----------|---------|-----------|---------|
-| **CPU** | 2 Cores | 4 Cores | NetBox braucht CPU beim Start |
-| **RAM** | 4 GB | 8 GB | NetBox + PostgreSQL speicherintensiv |
-| **Disk** | 10 GB | 20 GB | Logs, DB, Terraform State |
-| **OS** | Linux x86_64 | Debian/Ubuntu | Docker muss laufen |
-
-### Netzwerk-Voraussetzungen
+## Netzwerk-Voraussetzungen
 
 ```
 ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
@@ -440,9 +493,54 @@ Diese Einstellungen koennen auch im **Setup-Wizard** bei der Ersteinrichtung ges
                          └─────────────────┘
 ```
 
-- **Outbound :8006** - Proxmox API (TCP)
-- **Outbound :22** - SSH zu VMs fuer Ansible
-- **Inbound :8080** - Web-UI (optional :8081 fuer NetBox direkt)
+| Richtung | Port | Ziel | Beschreibung |
+|----------|------|------|--------------|
+| Outbound | 8006 | Proxmox VE | API-Kommunikation |
+| Outbound | 22 | VMs/Targets | SSH fuer Ansible |
+| Inbound | 8080 | Clients | Web-UI |
+| Inbound | 8081 | Clients | NetBox (optional) |
+
+## Backup und Wartung
+
+### Backup
+
+Alle persistenten Daten befinden sich im `./data/` Verzeichnis:
+
+```bash
+# Backup erstellen
+cd /opt/proxmox-commander
+tar -czvf backup-$(date +%Y%m%d).tar.gz data/
+
+# Wichtige Unterverzeichnisse:
+# - data/db/          - SQLite Datenbank (App)
+# - data/postgres/    - PostgreSQL (NetBox)
+# - data/config/      - Konfiguration (.env)
+# - data/ssh/         - SSH Keys
+# - data/terraform/   - Terraform State
+```
+
+### Produktivbetrieb Checkliste
+
+| Aspekt | Standard | Empfehlung |
+|--------|----------|------------|
+| **Secrets** | Auto-generiert | In `.env` persistent speichern |
+| **Reverse Proxy** | Direkt :8080/:8081 | Nginx/Traefik mit SSL davor |
+| **Backup** | Keins | `./data/` regelmaessig sichern |
+| **Updates** | Manuell | `docker compose pull && up -d` |
+| **Monitoring** | Keins | Health-Endpoint `/api/health` ueberwachen |
+
+## Cloud-Init Konfiguration
+
+Ab **v0.2.43** sind alle Cloud-Init Einstellungen ueber die Web-UI konfigurierbar:
+
+| Einstellung | Ort | Beschreibung |
+|-------------|-----|--------------|
+| SSH Public Keys | Verwaltung > Cloud-Init | Keys fuer VM-Zugang |
+| Phone-Home URL | Verwaltung > Cloud-Init | Callback nach VM-Start |
+| Admin-Username | Verwaltung > Cloud-Init | Default-User in VMs |
+| NAS Snippets | Verwaltung > Cloud-Init | Pfad fuer Cloud-Init Dateien |
+
+Diese Einstellungen koennen auch im **Setup-Wizard** bei der Ersteinrichtung gesetzt werden.
 
 ## Lizenz
 
