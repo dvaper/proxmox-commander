@@ -162,7 +162,7 @@
 
 <script setup>
 import { ref, onMounted, inject } from 'vue'
-import axios from 'axios'
+import api from '@/api/client'
 import SSHKeyManager from '@/components/SSHKeyManager.vue'
 
 const showSnackbar = inject('showSnackbar', null)
@@ -213,7 +213,7 @@ async function saveUserConfig() {
 
   saving.value = true
   try {
-    await axios.put('/api/settings/ssh', {
+    await api.put('/api/settings/ssh', {
       ssh_user: pendingUser.value,
     })
 
@@ -230,7 +230,7 @@ async function saveUserConfig() {
 // Inventory Hosts laden
 async function loadInventoryHosts() {
   try {
-    const response = await axios.get('/api/inventory/hosts')
+    const response = await api.get('/api/inventory/hosts')
     inventoryHosts.value = response.data.map(host => ({
       name: host.name,
       ip: host.ansible_host || host.name,
