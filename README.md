@@ -16,6 +16,40 @@
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Dashboard" width="800"><br>
+  <em>Dashboard mit Cluster-Status und Schnellzugriff</em>
+</p>
+
+<details>
+<summary><strong>Weitere Screenshots</strong></summary>
+
+<p align="center">
+  <img src="docs/screenshots/vm-inventory.png" alt="VM Inventory" width="800"><br>
+  <em>VM-Inventar mit Status-Anzeige</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/vm-deployment.png" alt="VM Deployment" width="800"><br>
+  <em>VM-Deployment Wizard</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ansible.png" alt="Ansible" width="800"><br>
+  <em>Ansible Playbook-Ausfuehrung mit Live-Output</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/netbox.png" alt="NetBox" width="800"><br>
+  <em>NetBox VLAN- und IP-Verwaltung</em>
+</p>
+
+</details>
+
+---
+
 ## Zielgruppe
 
 Proxmox Commander richtet sich an:
