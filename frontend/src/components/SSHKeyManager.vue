@@ -18,8 +18,68 @@
       Dieser Benutzer muss auf den Ziel-VMs existieren und SSH-Zugang haben.
     </v-alert>
 
-    <!-- Aktueller Key Status (nur wenn Key existiert) -->
-    <v-card v-if="currentConfig?.has_key" variant="outlined" class="mb-4">
+    <!-- Gespeicherte Keys -->
+    <v-card v-if="storedKeys.length > 0" variant="outlined" class="mb-4">
+      <v-card-title class="text-subtitle-1 d-flex align-center">
+        <v-icon start size="small" color="primary">mdi-key-chain</v-icon>
+        Gespeicherte SSH-Keys
+        <v-chip size="x-small" class="ml-2">{{ storedKeys.length }}</v-chip>
+      </v-card-title>
+      <v-card-text class="pt-0">
+        <v-list density="compact">
+          <v-list-item
+            v-for="key in storedKeys"
+            :key="key.id"
+            :class="{ 'bg-success-subtle': key.is_active }"
+          >
+            <template v-slot:prepend>
+              <v-icon :color="key.is_active ? 'success' : 'grey'">
+                {{ key.is_active ? 'mdi-check-circle' : 'mdi-key' }}
+              </v-icon>
+            </template>
+
+            <v-list-item-title>
+              {{ key.name }}
+              <v-chip v-if="key.is_active" size="x-small" color="success" class="ml-2">
+                Aktiv
+              </v-chip>
+            </v-list-item-title>
+            <v-list-item-subtitle>
+              {{ key.type?.toUpperCase() }} &bull;
+              <span class="text-mono">{{ key.fingerprint || 'Kein Fingerprint' }}</span>
+            </v-list-item-subtitle>
+
+            <template v-slot:append>
+              <v-btn
+                v-if="!key.is_active"
+                size="small"
+                variant="text"
+                color="primary"
+                :loading="activating === key.id"
+                @click="activateKey(key.id)"
+              >
+                <v-icon>mdi-check</v-icon>
+                <v-tooltip activator="parent" location="top">Aktivieren</v-tooltip>
+              </v-btn>
+              <v-btn
+                v-if="!key.is_active"
+                size="small"
+                variant="text"
+                color="error"
+                :loading="deleting === key.id"
+                @click="deleteKey(key.id)"
+              >
+                <v-icon>mdi-delete</v-icon>
+                <v-tooltip activator="parent" location="top">Loeschen</v-tooltip>
+              </v-btn>
+            </template>
+          </v-list-item>
+        </v-list>
+      </v-card-text>
+    </v-card>
+
+    <!-- Aktueller Key Status (nur wenn Key existiert und keine stored_keys) -->
+    <v-card v-else-if="currentConfig?.has_key" variant="outlined" class="mb-4">
       <v-card-title class="text-subtitle-1">
         <v-icon start size="small" color="success">mdi-check-circle</v-icon>
         Aktueller SSH-Key
@@ -337,6 +397,7 @@ const sshUser = ref(props.initialUser || 'ansible')
 const keyMode = ref('upload')
 const currentConfig = ref(null)
 const availableKeys = ref([])
+const storedKeys = ref([])
 const selectedKey = ref(null)
 const uploadPrivateKey = ref('')
 const fileInput = ref(null)
@@ -352,6 +413,8 @@ const importing = ref(false)
 const uploading = ref(false)
 const generating = ref(false)
 const testing = ref(false)
+const activating = ref(null)  // Key-ID des gerade aktivierten Keys
+const deleting = ref(null)  // Key-ID des gerade zu loeschenden Keys
 
 // Snackbar
 const snackbar = ref(false)
@@ -378,6 +441,8 @@ const endpoints = computed(() => {
       upload: `${props.apiPrefix}/upload`,
       generate: `${props.apiPrefix}/generate`,
       test: `${props.apiPrefix}/test`,
+      activate: `${props.apiPrefix}/activate`,
+      delete: `${props.apiPrefix}/delete`,
     }
   } else {
     // Setup-Modus: /api/setup/ssh-keys, /api/setup/ssh-import, etc.
@@ -387,6 +452,8 @@ const endpoints = computed(() => {
       upload: `${props.apiPrefix}/ssh-upload`,
       generate: `${props.apiPrefix}/ssh-generate`,
       test: `${props.apiPrefix}/ssh-test`,
+      activate: `${props.apiPrefix}/ssh-activate`,
+      delete: `${props.apiPrefix}/ssh-delete`,
     }
   }
 })
@@ -439,6 +506,7 @@ async function loadConfig() {
     // Verfuegbare Keys laden
     const keysResponse = await api.get(endpoints.value.keys)
     availableKeys.value = keysResponse.data.keys || []
+    storedKeys.value = keysResponse.data.stored_keys || []
     currentConfig.value = {
       has_key: !!keysResponse.data.current_key,
       key_type: keysResponse.data.current_key?.type,
@@ -561,6 +629,47 @@ async function testConnection() {
     }
   } finally {
     testing.value = false
+  }
+}
+
+async function activateKey(keyId) {
+  activating.value = keyId
+  try {
+    const response = await api.post(endpoints.value.activate, {
+      key_id: keyId,
+    })
+
+    if (response.data.success) {
+      showMessage('SSH-Key aktiviert!')
+      emit('key-changed', response.data)
+      await loadConfig()
+    } else {
+      showMessage(response.data.message, 'error')
+    }
+  } catch (e) {
+    showMessage(e.response?.data?.detail || 'Aktivierung fehlgeschlagen', 'error')
+  } finally {
+    activating.value = null
+  }
+}
+
+async function deleteKey(keyId) {
+  deleting.value = keyId
+  try {
+    const response = await api.post(endpoints.value.delete, {
+      key_id: keyId,
+    })
+
+    if (response.data.success) {
+      showMessage('SSH-Key geloescht!')
+      await loadConfig()
+    } else {
+      showMessage(response.data.message, 'error')
+    }
+  } catch (e) {
+    showMessage(e.response?.data?.detail || 'Loeschen fehlgeschlagen', 'error')
+  } finally {
+    deleting.value = null
   }
 }
 

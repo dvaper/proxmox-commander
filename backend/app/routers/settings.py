@@ -160,6 +160,10 @@ from app.services.ssh_service import (
     SSHKeyUploadResponse,
     SSHKeyGenerateRequest,
     SSHKeyGenerateResponse,
+    SSHKeyActivateRequest,
+    SSHKeyActivateResponse,
+    SSHKeyDeleteRequest,
+    SSHKeyDeleteResponse,
     SSHTestRequest,
     SSHTestResponse,
     SSHConfigResponse,
@@ -265,3 +269,31 @@ async def test_ssh_connection(
     """
     ssh_service = get_ssh_service()
     return await ssh_service.test_connection(request)
+
+
+@router.post("/ssh/activate", response_model=SSHKeyActivateResponse)
+async def activate_ssh_key(
+    request: SSHKeyActivateRequest,
+    current_user: User = Depends(get_current_super_admin_user),
+):
+    """
+    SSH-Key aktivieren (nur Super-Admin).
+
+    Setzt den angegebenen Key als aktiven Key fuer SSH-Verbindungen.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.activate_key(request)
+
+
+@router.post("/ssh/delete", response_model=SSHKeyDeleteResponse)
+async def delete_ssh_key(
+    request: SSHKeyDeleteRequest,
+    current_user: User = Depends(get_current_super_admin_user),
+):
+    """
+    SSH-Key loeschen (nur Super-Admin).
+
+    Loescht den angegebenen Key. Der aktive Key kann nicht geloescht werden.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.delete_key(request)

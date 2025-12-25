@@ -28,30 +28,36 @@ logger = logging.getLogger(__name__)
 
 class SSHKeyInfo(BaseModel):
     """Information ueber einen SSH-Key"""
-    name: str  # z.B. "id_ed25519", "id_rsa"
+    id: Optional[str] = None  # Eindeutige ID fuer gespeicherte Keys
+    name: str  # z.B. "id_ed25519", "id_rsa", "mein-key"
     path: str  # Vollstaendiger Pfad
     type: str  # "ed25519", "rsa", "ecdsa", "dsa"
     has_public: bool  # Ob .pub Datei existiert
     fingerprint: Optional[str] = None
+    is_active: bool = False  # Ob dieser Key aktuell aktiv ist
+    created_at: Optional[str] = None  # Erstellungsdatum
 
 
 class SSHKeyListResponse(BaseModel):
     """Liste verfuegbarer SSH-Keys"""
     available: bool  # Ob das SSH-Verzeichnis gemountet ist
-    keys: List[SSHKeyInfo] = []
-    current_key: Optional[SSHKeyInfo] = None  # Aktuell konfigurierter Key
+    keys: List[SSHKeyInfo] = []  # Keys aus Host-SSH (zum Import)
+    stored_keys: List[SSHKeyInfo] = []  # Gespeicherte Keys
+    current_key: Optional[SSHKeyInfo] = None  # Aktuell aktiver Key
     default_user: str  # Aktueller/empfohlener Benutzer
 
 
 class SSHKeyImportRequest(BaseModel):
     """Request zum Importieren eines SSH-Keys"""
     source_path: str  # z.B. "/host-ssh/id_ed25519"
+    key_name: Optional[str] = None  # Optionaler Name fuer den Key
 
 
 class SSHKeyImportResponse(BaseModel):
     """Ergebnis des Imports"""
     success: bool
     message: str
+    key_id: Optional[str] = None
     target_path: Optional[str] = None
     public_key: Optional[str] = None
 
@@ -60,12 +66,14 @@ class SSHKeyUploadRequest(BaseModel):
     """Request zum Hochladen eines SSH-Keys"""
     private_key: str  # PEM-formatierter Private Key
     public_key: Optional[str] = None  # Optional: Public Key
+    key_name: Optional[str] = None  # Optionaler Name fuer den Key
 
 
 class SSHKeyUploadResponse(BaseModel):
     """Ergebnis des Uploads"""
     success: bool
     message: str
+    key_id: Optional[str] = None
     key_type: Optional[str] = None
     fingerprint: Optional[str] = None
     public_key: Optional[str] = None
@@ -75,14 +83,40 @@ class SSHKeyGenerateRequest(BaseModel):
     """Request zum Generieren eines neuen SSH-Keys"""
     key_type: str = "ed25519"  # "ed25519" oder "rsa"
     comment: str = ""  # Optionaler Kommentar
+    key_name: Optional[str] = None  # Optionaler Name fuer den Key
 
 
 class SSHKeyGenerateResponse(BaseModel):
     """Ergebnis der Generierung"""
     success: bool
     message: str
+    key_id: Optional[str] = None
     public_key: Optional[str] = None  # Zur Anzeige fuer den Benutzer
     fingerprint: Optional[str] = None
+
+
+# Key-Management Schemas
+class SSHKeyActivateRequest(BaseModel):
+    """Request zum Aktivieren eines Keys"""
+    key_id: str
+
+
+class SSHKeyActivateResponse(BaseModel):
+    """Ergebnis der Aktivierung"""
+    success: bool
+    message: str
+    active_key: Optional[SSHKeyInfo] = None
+
+
+class SSHKeyDeleteRequest(BaseModel):
+    """Request zum Loeschen eines Keys"""
+    key_id: str
+
+
+class SSHKeyDeleteResponse(BaseModel):
+    """Ergebnis des Loeschens"""
+    success: bool
+    message: str
 
 
 class SSHTestRequest(BaseModel):
@@ -129,6 +163,12 @@ class SSHService:
     # Zielverzeichnis fuer SSH-Keys
     SSH_KEY_DIR = Path("/data/ssh")
 
+    # Unterverzeichnis fuer gespeicherte Keys
+    KEYS_SUBDIR = "keys"
+
+    # Metadaten-Datei
+    METADATA_FILE = "keys.json"
+
     # Unterstuetzte Key-Typen
     KEY_TYPES = {
         "ssh-ed25519": "ed25519",
@@ -140,6 +180,39 @@ class SSHService:
     def __init__(self):
         pass
 
+    @property
+    def keys_dir(self) -> Path:
+        """Verzeichnis fuer gespeicherte Keys"""
+        return self.SSH_KEY_DIR / self.KEYS_SUBDIR
+
+    @property
+    def metadata_path(self) -> Path:
+        """Pfad zur Metadaten-Datei"""
+        return self.SSH_KEY_DIR / self.METADATA_FILE
+
+    def _load_metadata(self) -> dict:
+        """Laedt Key-Metadaten aus JSON-Datei"""
+        import json
+        if self.metadata_path.exists():
+            try:
+                with open(self.metadata_path) as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.warning(f"Metadaten konnten nicht geladen werden: {e}")
+        return {"keys": {}, "active_key_id": None}
+
+    def _save_metadata(self, metadata: dict) -> None:
+        """Speichert Key-Metadaten in JSON-Datei"""
+        import json
+        self.SSH_KEY_DIR.mkdir(parents=True, exist_ok=True)
+        with open(self.metadata_path, "w") as f:
+            json.dump(metadata, f, indent=2)
+
+    def _generate_key_id(self) -> str:
+        """Generiert eine eindeutige Key-ID"""
+        import uuid
+        return str(uuid.uuid4())[:8]
+
     # =========================================================================
     # Key Discovery
     # =========================================================================
@@ -149,7 +222,7 @@ class SSHService:
         Listet verfuegbare SSH-Keys auf.
 
         Prueft das gemountete Host-SSH-Verzeichnis und listet alle
-        verfuegbaren Private Keys auf.
+        verfuegbaren Private Keys auf. Zeigt auch gespeicherte Keys.
         """
         host_ssh_path = Path(self.HOST_SSH_DIR)
         available = host_ssh_path.exists() and host_ssh_path.is_dir()
@@ -164,7 +237,10 @@ class SSHService:
                     if key_info:
                         keys.append(key_info)
 
-        # Aktuell konfigurierten Key pruefen
+        # Gespeicherte Keys laden
+        stored_keys = await self._list_stored_keys()
+
+        # Aktuell aktiven Key pruefen
         current_key = await self._get_current_key_info()
 
         # Default-User ermitteln
@@ -173,8 +249,218 @@ class SSHService:
         return SSHKeyListResponse(
             available=available,
             keys=keys,
+            stored_keys=stored_keys,
             current_key=current_key,
             default_user=default_user,
+        )
+
+    async def _list_stored_keys(self) -> List[SSHKeyInfo]:
+        """Listet alle gespeicherten Keys auf"""
+        from datetime import datetime
+
+        metadata = self._load_metadata()
+        active_key_id = metadata.get("active_key_id")
+        stored_keys = []
+
+        for key_id, key_data in metadata.get("keys", {}).items():
+            key_path = self.keys_dir / key_data.get("filename", "")
+            if not key_path.exists():
+                continue
+
+            # Fingerprint berechnen
+            fingerprint = await self._get_key_fingerprint(key_path)
+
+            stored_keys.append(SSHKeyInfo(
+                id=key_id,
+                name=key_data.get("name", key_id),
+                path=str(key_path),
+                type=key_data.get("type", "unknown"),
+                has_public=(key_path.with_suffix(key_path.suffix + ".pub")).exists() or Path(str(key_path) + ".pub").exists(),
+                fingerprint=fingerprint,
+                is_active=(key_id == active_key_id),
+                created_at=key_data.get("created_at"),
+            ))
+
+        return stored_keys
+
+    async def _store_key(
+        self,
+        private_key: str,
+        public_key: Optional[str],
+        key_type: str,
+        key_name: Optional[str] = None,
+        activate: bool = True,
+    ) -> tuple[str, Path, str]:
+        """
+        Speichert einen Key im keys/ Verzeichnis mit Metadaten.
+
+        Returns: (key_id, key_path, public_key)
+        """
+        from datetime import datetime
+
+        # Verzeichnis erstellen
+        self.keys_dir.mkdir(parents=True, exist_ok=True)
+
+        # Key-ID generieren
+        key_id = self._generate_key_id()
+
+        # Dateiname
+        filename = f"{key_id}_{key_type}"
+        key_path = self.keys_dir / filename
+
+        # Private Key schreiben
+        key_path.write_text(private_key.strip() + "\n")
+        os.chmod(key_path, 0o600)
+
+        # Public Key verarbeiten
+        if public_key:
+            pub_path = Path(str(key_path) + ".pub")
+            pub_path.write_text(public_key.strip() + "\n")
+            os.chmod(pub_path, 0o644)
+        else:
+            # Public Key aus Private Key generieren
+            public_key = await self._generate_public_from_private(key_path)
+            if public_key:
+                pub_path = Path(str(key_path) + ".pub")
+                pub_path.write_text(public_key + "\n")
+                os.chmod(pub_path, 0o644)
+
+        # Genaueren Key-Typ ermitteln
+        actual_type = await self._get_actual_key_type(key_path) or key_type
+
+        # Metadaten aktualisieren
+        metadata = self._load_metadata()
+        metadata["keys"][key_id] = {
+            "name": key_name or f"{actual_type.upper()}-Key ({key_id})",
+            "filename": filename,
+            "type": actual_type,
+            "created_at": datetime.now().isoformat(),
+        }
+
+        # Optional: Key aktivieren
+        if activate:
+            metadata["active_key_id"] = key_id
+            await self._create_active_symlink(key_path, actual_type)
+
+        self._save_metadata(metadata)
+
+        logger.info(f"SSH-Key gespeichert: {key_path} (ID: {key_id})")
+
+        return key_id, key_path, public_key or ""
+
+    async def _create_active_symlink(self, source_path: Path, key_type: str) -> None:
+        """Erstellt Symlink zum aktiven Key"""
+        # Ziel-Symlink-Name
+        if key_type in ["rsa"]:
+            link_name = "id_rsa"
+        else:
+            link_name = "id_ed25519"
+
+        link_path = self.SSH_KEY_DIR / link_name
+        pub_link_path = Path(str(link_path) + ".pub")
+
+        # Alte Links/Dateien entfernen
+        if link_path.exists() or link_path.is_symlink():
+            link_path.unlink()
+        if pub_link_path.exists() or pub_link_path.is_symlink():
+            pub_link_path.unlink()
+
+        # Neue Symlinks erstellen (relativ)
+        rel_source = source_path.relative_to(self.SSH_KEY_DIR)
+        link_path.symlink_to(rel_source)
+
+        # Public Key Symlink
+        source_pub = Path(str(source_path) + ".pub")
+        if source_pub.exists():
+            rel_source_pub = source_pub.relative_to(self.SSH_KEY_DIR)
+            pub_link_path.symlink_to(rel_source_pub)
+
+        logger.info(f"Aktiver Key-Symlink erstellt: {link_path} -> {rel_source}")
+
+    async def activate_key(self, request: SSHKeyActivateRequest) -> SSHKeyActivateResponse:
+        """Aktiviert einen gespeicherten Key"""
+        key_id = request.key_id
+
+        metadata = self._load_metadata()
+        if key_id not in metadata.get("keys", {}):
+            return SSHKeyActivateResponse(
+                success=False,
+                message=f"Key mit ID '{key_id}' nicht gefunden",
+            )
+
+        key_data = metadata["keys"][key_id]
+        key_path = self.keys_dir / key_data["filename"]
+
+        if not key_path.exists():
+            return SSHKeyActivateResponse(
+                success=False,
+                message="Key-Datei nicht gefunden",
+            )
+
+        # Symlink erstellen
+        await self._create_active_symlink(key_path, key_data.get("type", "ed25519"))
+
+        # Metadaten aktualisieren
+        metadata["active_key_id"] = key_id
+        self._save_metadata(metadata)
+
+        # Key-Info zurueckgeben
+        fingerprint = await self._get_key_fingerprint(key_path)
+        active_key = SSHKeyInfo(
+            id=key_id,
+            name=key_data.get("name", key_id),
+            path=str(key_path),
+            type=key_data.get("type", "unknown"),
+            has_public=Path(str(key_path) + ".pub").exists(),
+            fingerprint=fingerprint,
+            is_active=True,
+            created_at=key_data.get("created_at"),
+        )
+
+        return SSHKeyActivateResponse(
+            success=True,
+            message=f"Key '{key_data.get('name')}' aktiviert",
+            active_key=active_key,
+        )
+
+    async def delete_key(self, request: SSHKeyDeleteRequest) -> SSHKeyDeleteResponse:
+        """Loescht einen gespeicherten Key"""
+        key_id = request.key_id
+
+        metadata = self._load_metadata()
+        if key_id not in metadata.get("keys", {}):
+            return SSHKeyDeleteResponse(
+                success=False,
+                message=f"Key mit ID '{key_id}' nicht gefunden",
+            )
+
+        # Pruefen ob der Key aktiv ist
+        if metadata.get("active_key_id") == key_id:
+            return SSHKeyDeleteResponse(
+                success=False,
+                message="Aktiver Key kann nicht gelöscht werden. Bitte zuerst anderen Key aktivieren.",
+            )
+
+        key_data = metadata["keys"][key_id]
+        key_path = self.keys_dir / key_data["filename"]
+
+        # Dateien loeschen
+        try:
+            if key_path.exists():
+                key_path.unlink()
+            pub_path = Path(str(key_path) + ".pub")
+            if pub_path.exists():
+                pub_path.unlink()
+        except Exception as e:
+            logger.error(f"Fehler beim Loeschen der Key-Dateien: {e}")
+
+        # Aus Metadaten entfernen
+        del metadata["keys"][key_id]
+        self._save_metadata(metadata)
+
+        return SSHKeyDeleteResponse(
+            success=True,
+            message=f"Key '{key_data.get('name')}' gelöscht",
         )
 
     async def _analyze_key_file(self, path: Path) -> Optional[SSHKeyInfo]:
@@ -271,6 +557,7 @@ class SSHService:
     async def import_key(self, request: SSHKeyImportRequest) -> SSHKeyImportResponse:
         """
         Importiert einen Key aus dem gemounteten Host-SSH-Verzeichnis.
+        Unterstuetzt Multi-Key-Speicherung.
         """
         source_path = Path(request.source_path)
 
@@ -290,39 +577,40 @@ class SSHService:
             )
 
         try:
-            # Zielverzeichnis erstellen
-            self.SSH_KEY_DIR.mkdir(parents=True, exist_ok=True)
+            # Key-Inhalt lesen
+            private_key = source_path.read_text()
+            key_type = self._detect_private_key_type(private_key)
 
-            # Key-Typ erkennen fuer Zieldateiname
-            content = source_path.read_text()
-            key_type = self._detect_private_key_type(content)
+            if not key_type:
+                return SSHKeyImportResponse(
+                    success=False,
+                    message="Unbekannter Key-Typ",
+                )
 
-            # Zieldateiname
-            if key_type == "rsa":
-                target_name = "id_rsa"
-            else:
-                target_name = "id_ed25519"
-
-            target_path = self.SSH_KEY_DIR / target_name
-
-            # Private Key kopieren
-            shutil.copy2(source_path, target_path)
-            os.chmod(target_path, 0o600)
-
-            # Public Key kopieren falls vorhanden
+            # Public Key lesen falls vorhanden
             public_key = None
             source_pub = Path(str(source_path) + ".pub")
             if source_pub.exists():
-                target_pub = Path(str(target_path) + ".pub")
-                shutil.copy2(source_pub, target_pub)
-                os.chmod(target_pub, 0o644)
-                public_key = target_pub.read_text().strip()
+                public_key = source_pub.read_text().strip()
 
-            logger.info(f"SSH-Key importiert: {source_path} -> {target_path}")
+            # Key-Name generieren
+            key_name = request.key_name or f"Import: {source_path.name}"
+
+            # Key mit Multi-Key-Support speichern
+            key_id, target_path, public_key = await self._store_key(
+                private_key=private_key,
+                public_key=public_key,
+                key_type=key_type,
+                key_name=key_name,
+                activate=True,
+            )
+
+            logger.info(f"SSH-Key importiert: {source_path} -> {target_path} (ID: {key_id})")
 
             return SSHKeyImportResponse(
                 success=True,
-                message=f"SSH-Key erfolgreich importiert",
+                message="SSH-Key erfolgreich importiert und aktiviert",
+                key_id=key_id,
                 target_path=str(target_path),
                 public_key=public_key,
             )
@@ -359,48 +647,25 @@ class SSHService:
             )
 
         try:
-            # Zielverzeichnis erstellen
-            self.SSH_KEY_DIR.mkdir(parents=True, exist_ok=True)
-
-            # Zieldateiname
-            if key_type == "rsa":
-                target_name = "id_rsa"
-            else:
-                target_name = "id_ed25519"
-
-            target_path = self.SSH_KEY_DIR / target_name
-
-            # Private Key schreiben
-            target_path.write_text(private_key + "\n")
-            os.chmod(target_path, 0o600)
-
-            # Public Key verarbeiten
-            public_key = None
-            if request.public_key:
-                # Public Key wurde mitgeliefert
-                target_pub = Path(str(target_path) + ".pub")
-                target_pub.write_text(request.public_key.strip() + "\n")
-                os.chmod(target_pub, 0o644)
-                public_key = request.public_key.strip()
-            else:
-                # Public Key aus Private Key generieren
-                public_key = await self._generate_public_from_private(target_path)
-                if public_key:
-                    target_pub = Path(str(target_path) + ".pub")
-                    target_pub.write_text(public_key + "\n")
-                    os.chmod(target_pub, 0o644)
+            # Key speichern mit Multi-Key-Support
+            key_id, key_path, public_key = await self._store_key(
+                private_key=private_key,
+                public_key=request.public_key,
+                key_type=key_type,
+                key_name=request.key_name,
+                activate=True,
+            )
 
             # Fingerprint berechnen
-            fingerprint = await self._get_key_fingerprint(target_path)
+            fingerprint = await self._get_key_fingerprint(key_path)
 
             # Key-Typ genauer bestimmen
-            actual_type = await self._get_actual_key_type(target_path)
-
-            logger.info(f"SSH-Key hochgeladen: {target_path}")
+            actual_type = await self._get_actual_key_type(key_path)
 
             return SSHKeyUploadResponse(
                 success=True,
-                message="SSH-Key erfolgreich gespeichert",
+                message="SSH-Key erfolgreich gespeichert und aktiviert",
+                key_id=key_id,
                 key_type=actual_type or key_type,
                 fingerprint=fingerprint,
                 public_key=public_key,
@@ -457,6 +722,9 @@ class SSHService:
         """
         Generiert ein neues SSH-Schluesselpaar.
         """
+        import tempfile
+        from datetime import datetime
+
         key_type = request.key_type.lower()
         if key_type not in ["ed25519", "rsa"]:
             return SSHKeyGenerateResponse(
@@ -465,21 +733,14 @@ class SSHService:
             )
 
         try:
-            # Zielverzeichnis erstellen
-            self.SSH_KEY_DIR.mkdir(parents=True, exist_ok=True)
+            # Key-ID und Verzeichnis vorbereiten
+            key_id = self._generate_key_id()
+            self.keys_dir.mkdir(parents=True, exist_ok=True)
 
-            # Zieldateiname
-            if key_type == "rsa":
-                target_path = self.SSH_KEY_DIR / "id_rsa"
-            else:
-                target_path = self.SSH_KEY_DIR / "id_ed25519"
-
-            # Bestehende Keys loeschen
-            if target_path.exists():
-                target_path.unlink()
+            # Zieldateiname im keys/ Verzeichnis
+            filename = f"{key_id}_{key_type}"
+            target_path = self.keys_dir / filename
             pub_path = Path(str(target_path) + ".pub")
-            if pub_path.exists():
-                pub_path.unlink()
 
             # ssh-keygen ausfuehren
             cmd = [
@@ -517,11 +778,27 @@ class SSHService:
             # Fingerprint berechnen
             fingerprint = await self._get_key_fingerprint(target_path)
 
-            logger.info(f"SSH-Key generiert: {target_path}")
+            # Metadaten speichern
+            metadata = self._load_metadata()
+            key_name = request.key_name or f"{key_type.upper()}-Key ({key_id})"
+            metadata["keys"][key_id] = {
+                "name": key_name,
+                "filename": filename,
+                "type": key_type,
+                "created_at": datetime.now().isoformat(),
+            }
+
+            # Key aktivieren
+            metadata["active_key_id"] = key_id
+            await self._create_active_symlink(target_path, key_type)
+            self._save_metadata(metadata)
+
+            logger.info(f"SSH-Key generiert: {target_path} (ID: {key_id})")
 
             return SSHKeyGenerateResponse(
                 success=True,
-                message=f"SSH-Key ({key_type.upper()}) erfolgreich generiert",
+                message=f"SSH-Key ({key_type.upper()}) erfolgreich generiert und aktiviert",
+                key_id=key_id,
                 public_key=public_key,
                 fingerprint=fingerprint,
             )

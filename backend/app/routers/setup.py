@@ -705,6 +705,10 @@ from app.services.ssh_service import (
     SSHKeyUploadResponse,
     SSHKeyGenerateRequest,
     SSHKeyGenerateResponse,
+    SSHKeyActivateRequest,
+    SSHKeyActivateResponse,
+    SSHKeyDeleteRequest,
+    SSHKeyDeleteResponse,
     SSHTestRequest,
     SSHTestResponse,
 )
@@ -779,3 +783,29 @@ async def test_ssh_connection(request: SSHTestRequest):
     """
     ssh_service = get_ssh_service()
     return await ssh_service.test_connection(request)
+
+
+@router.post("/ssh-activate", response_model=SSHKeyActivateResponse)
+async def activate_ssh_key(request: SSHKeyActivateRequest):
+    """
+    Aktiviert einen gespeicherten SSH-Key.
+
+    Setzt den angegebenen Key als aktiven Key fuer SSH-Verbindungen.
+
+    Dieser Endpoint ist ohne Authentifizierung zugaenglich.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.activate_key(request)
+
+
+@router.post("/ssh-delete", response_model=SSHKeyDeleteResponse)
+async def delete_ssh_key(request: SSHKeyDeleteRequest):
+    """
+    Loescht einen gespeicherten SSH-Key.
+
+    Der aktive Key kann nicht geloescht werden.
+
+    Dieser Endpoint ist ohne Authentifizierung zugaenglich.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.delete_key(request)
