@@ -1326,3 +1326,8 @@ class ProxmoxService:
 
 # Singleton-Instanz
 proxmox_service = ProxmoxService()
+
+
+def get_proxmox_service() -> ProxmoxService:
+    """Gibt die Singleton-Instanz des ProxmoxService zurueck."""
+    return proxmox_service

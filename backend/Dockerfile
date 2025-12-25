@@ -22,6 +22,13 @@ RUN for i in 1 2 3; do \
     && echo $TZ > /etc/timezone \
     && rm -rf /var/lib/apt/lists/*
 
+# Docker CLI installieren (nur CLI, kein Daemon)
+RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-27.4.1.tgz -o /tmp/docker.tgz \
+    && tar -xzf /tmp/docker.tgz -C /tmp \
+    && mv /tmp/docker/docker /usr/local/bin/ \
+    && rm -rf /tmp/docker /tmp/docker.tgz \
+    && docker --version
+
 # Terraform installieren
 RUN curl -fsSL https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip -o /tmp/terraform.zip \
     && unzip /tmp/terraform.zip -d /usr/local/bin/ \
