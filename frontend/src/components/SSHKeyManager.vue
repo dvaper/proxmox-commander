@@ -417,6 +417,8 @@ async function loadConfig() {
     emit('config-loaded', currentConfig.value)
   } catch (e) {
     console.error('Fehler beim Laden der SSH-Konfiguration:', e)
+    // Auch bei Fehler config-loaded emittieren damit Parent-Komponente nicht haengt
+    emit('config-loaded', { ssh_user: sshUser.value, has_key: false, error: true })
   } finally {
     loading.value = false
   }
