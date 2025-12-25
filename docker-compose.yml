@@ -34,8 +34,7 @@ services:
       - TZ=${TZ:-Europe/Berlin}
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
       - DEBUG=${DEBUG:-false}
-      # NetBox laeuft mit BASE_PATH=/netbox/, daher URL mit Pfad
-      - NETBOX_URL=http://netbox:8080/netbox
+      - NETBOX_URL=http://netbox:8080
       - NETBOX_TOKEN=${NETBOX_TOKEN:-}
       - DATA_DIR=/data
       - INVENTORY_DIR=/data/inventory
@@ -78,8 +77,6 @@ services:
     environment:
       - TZ=${TZ:-Europe/Berlin}
       - CORS_ORIGIN_ALLOW_ALL=True
-      # BASE_PATH für Zugriff über /netbox/ Subpfad
-      - BASE_PATH=/netbox/
       - DB_HOST=postgres
       - DB_NAME=netbox
       - DB_USER=netbox

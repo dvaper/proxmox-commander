@@ -10,6 +10,7 @@
       </v-col>
       <v-col cols="auto">
         <v-btn
+          v-if="netboxUrl"
           color="primary"
           variant="outlined"
           size="small"
@@ -19,6 +20,10 @@
           <v-icon start>mdi-open-in-new</v-icon>
           NetBox oeffnen
         </v-btn>
+        <v-chip v-else color="warning" variant="tonal" size="small">
+          <v-icon start size="small">mdi-alert</v-icon>
+          URL nicht konfiguriert
+        </v-chip>
       </v-col>
     </v-row>
 
@@ -489,10 +494,8 @@
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api/client'
 
-// NetBox URL: ueber /netbox/ Subpfad (funktioniert mit Reverse Proxy)
-const netboxUrl = computed(() => {
-  return `${window.location.origin}/netbox/`
-})
+// NetBox URL: wird aus Settings geladen
+const netboxUrl = ref(null)
 
 // Aktiver Tab - Default ist Import fuer neue User
 const activeTab = ref('import')
@@ -678,13 +681,24 @@ async function importVlans() {
   }
 }
 
+// NetBox URL laden
+async function loadNetboxUrl() {
+  try {
+    const response = await api.get('/api/settings/netbox-url')
+    netboxUrl.value = response.data.url
+  } catch (error) {
+    console.error('Fehler beim Laden der NetBox URL:', error)
+  }
+}
+
 // Beim Laden der Komponente
 onMounted(async () => {
   // Parallel laden fuer bessere Performance
   await Promise.all([
     loadVlans(),
     loadPrefixes(),
-    scanProxmox()  // Automatisch Proxmox scannen
+    scanProxmox(),  // Automatisch Proxmox scannen
+    loadNetboxUrl()
   ])
 
   // Wenn bereits VLANs in NetBox vorhanden UND keine neuen VLANs in Proxmox,

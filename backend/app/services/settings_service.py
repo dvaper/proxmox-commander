@@ -11,7 +11,12 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.models.app_settings import AppSettings, SETTING_DEFAULT_GROUPS, SETTING_DEFAULT_PLAYBOOKS
+from app.models.app_settings import (
+    AppSettings,
+    SETTING_DEFAULT_GROUPS,
+    SETTING_DEFAULT_PLAYBOOKS,
+    SETTING_NETBOX_EXTERNAL_URL,
+)
 
 
 class SettingsService:
@@ -148,6 +153,40 @@ class SettingsService:
             json.dumps(playbooks),
             "Standard-Playbooks für neue Benutzer"
         )
+
+    # ==================== NetBox External URL ====================
+
+    async def get_netbox_external_url(self) -> Optional[str]:
+        """
+        Holt die externe NetBox URL.
+
+        Returns:
+            Externe NetBox URL oder None
+        """
+        return await self.get_setting(SETTING_NETBOX_EXTERNAL_URL)
+
+    async def set_netbox_external_url(self, url: Optional[str]) -> None:
+        """
+        Setzt die externe NetBox URL.
+
+        Args:
+            url: Externe URL (z.B. https://netbox.example.com)
+        """
+        if url:
+            await self.set_setting(
+                SETTING_NETBOX_EXTERNAL_URL,
+                url,
+                "Externe URL fuer NetBox UI (fuer Browser-Zugriff)"
+            )
+        else:
+            # URL loeschen wenn None oder leer
+            result = await self.db.execute(
+                select(AppSettings).where(AppSettings.key == SETTING_NETBOX_EXTERNAL_URL)
+            )
+            setting = result.scalar_one_or_none()
+            if setting:
+                await self.db.delete(setting)
+                await self.db.commit()
 
     # ==================== Kombinierte Methoden ====================
 

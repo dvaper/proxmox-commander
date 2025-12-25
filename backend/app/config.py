@@ -65,10 +65,12 @@ class Settings(BaseSettings):
         return self.playbooks_dir
 
     # ==========================================================================
-    # NetBox (interner Container mit BASE_PATH=/netbox/)
+    # NetBox (interner Container)
     # ==========================================================================
-    netbox_url: str = "http://netbox:8080/netbox"
+    netbox_url: str = "http://netbox:8080"
     netbox_token: Optional[str] = None
+    # Externe URL fuer Frontend (konfigurierbar im Setup-Wizard)
+    netbox_external_url: Optional[str] = None
 
     # ==========================================================================
     # Proxmox API

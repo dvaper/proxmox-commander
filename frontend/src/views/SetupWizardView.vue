@@ -330,6 +330,18 @@
                           </v-alert>
 
                           <v-text-field
+                            v-model="config.netbox_external_url"
+                            label="NetBox Externe URL (fuer Browser)"
+                            prepend-inner-icon="mdi-open-in-new"
+                            placeholder="https://netbox.example.com oder http://192.168.1.100:8081"
+                            hint="URL unter der NetBox im Browser erreichbar ist (fuer Links im UI)"
+                            persistent-hint
+                            variant="outlined"
+                            density="compact"
+                            class="mb-4"
+                          ></v-text-field>
+
+                          <v-text-field
                             v-model="config.netbox_admin_user"
                             label="Admin-Benutzername"
                             prepend-inner-icon="mdi-account"
@@ -382,15 +394,27 @@
                         <div v-if="netboxMode === 'external'">
                           <v-alert type="warning" variant="tonal" density="compact" class="mb-4">
                             Bei Verwendung eines externen NetBox wird der integrierte Container nicht genutzt.
-                            Die URL muss vom Backend aus erreichbar sein.
+                            Die Backend-URL muss vom Server aus erreichbar sein.
                           </v-alert>
 
                           <v-text-field
                             v-model="config.netbox_url"
-                            label="NetBox URL"
+                            label="NetBox Backend-URL (fuer API)"
                             placeholder="https://netbox.example.com"
                             prepend-inner-icon="mdi-web"
-                            hint="Vollständige URL inkl. Protokoll"
+                            hint="URL fuer Backend-Kommunikation (API-Zugriff)"
+                            persistent-hint
+                            variant="outlined"
+                            density="compact"
+                            class="mb-4"
+                          ></v-text-field>
+
+                          <v-text-field
+                            v-model="config.netbox_external_url"
+                            label="NetBox Externe URL (fuer Browser)"
+                            prepend-inner-icon="mdi-open-in-new"
+                            placeholder="https://netbox.example.com"
+                            hint="URL unter der NetBox im Browser erreichbar ist (fuer Links im UI)"
                             persistent-hint
                             variant="outlined"
                             density="compact"
@@ -691,6 +715,7 @@ const config = ref({
   default_ssh_user: 'ansible',
   netbox_token: DEFAULT_NETBOX_TOKEN,  // Default-Token verwenden!
   netbox_url: '',
+  netbox_external_url: '',  // Externe URL fuer Browser-Links
   // App Admin Credentials
   app_admin_user: 'admin',
   app_admin_password: '',
@@ -877,6 +902,7 @@ async function saveConfig() {
       // NetBox
       netbox_token: netboxToken,
       netbox_url: netboxUrl,
+      netbox_external_url: config.value.netbox_external_url || null,
       netbox_admin_user: netboxAdminUser,
       netbox_admin_password: netboxAdminPassword,
       netbox_admin_email: netboxAdminEmail,

@@ -22,3 +22,4 @@ class AppSettings(Base):
 # Bekannte Settings-Keys
 SETTING_DEFAULT_GROUPS = "default_groups"  # JSON-Array der Standard-Gruppen
 SETTING_DEFAULT_PLAYBOOKS = "default_playbooks"  # JSON-Array der Standard-Playbooks
+SETTING_NETBOX_EXTERNAL_URL = "netbox_external_url"  # Externe URL fuer NetBox UI

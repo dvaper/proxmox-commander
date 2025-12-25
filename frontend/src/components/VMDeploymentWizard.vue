@@ -489,10 +489,8 @@ const availableIPs = ref([])
 const selectedIP = ref(null)
 const ipMode = ref('auto')
 const ipamError = ref(false)
-// NetBox URL: ueber /netbox/ Subpfad (funktioniert mit Reverse Proxy)
-const netboxUrl = computed(() => {
-  return `${window.location.origin}/netbox/`
-})
+// NetBox URL: wird aus Settings geladen
+const netboxUrl = ref(null)
 const validation = ref(null)
 const preview = ref(null)
 const loadingTemplates = ref(false)
@@ -599,6 +597,7 @@ async function open() {
   await loadStoragePools()
   await loadAvailableIPs()
   await loadPresets()
+  await loadNetboxUrl()
 
   dialog.value = true
 }
@@ -783,6 +782,15 @@ async function loadAvailableIPs() {
     }
   } finally {
     loadingIPs.value = false
+  }
+}
+
+async function loadNetboxUrl() {
+  try {
+    const response = await api.get('/api/settings/netbox-url')
+    netboxUrl.value = response.data.url
+  } catch (e) {
+    console.error('NetBox URL laden fehlgeschlagen:', e)
   }
 }
 

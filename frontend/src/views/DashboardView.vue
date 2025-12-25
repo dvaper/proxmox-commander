@@ -166,6 +166,7 @@
             <div class="text-overline text-grey mb-1">WEITERE DIENSTE</div>
             <v-list density="compact">
               <v-list-item
+                v-if="netboxUrl"
                 prepend-icon="mdi-ip-network-outline"
                 title="NetBox IPAM"
                 subtitle="IP-Adressverwaltung"
@@ -174,6 +175,17 @@
               >
                 <template v-slot:append>
                   <v-icon size="small">mdi-open-in-new</v-icon>
+                </template>
+              </v-list-item>
+              <v-list-item
+                v-else
+                prepend-icon="mdi-ip-network-outline"
+                title="NetBox IPAM"
+                subtitle="URL nicht konfiguriert"
+                disabled
+              >
+                <template v-slot:append>
+                  <v-chip size="x-small" color="warning" variant="tonal">Setup</v-chip>
                 </template>
               </v-list-item>
             </v-list>
@@ -192,17 +204,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/client'
 import { formatDate, getStatusColor, getStatusIcon } from '@/utils/formatting'
 
 const router = useRouter()
 
-// NetBox URL: ueber /netbox/ Subpfad (funktioniert mit Reverse Proxy)
-const netboxUrl = computed(() => {
-  return `${window.location.origin}/netbox/`
-})
+// NetBox URL: wird aus Settings geladen
+const netboxUrl = ref(null)
 
 const stats = ref({
   hosts: 0,
@@ -344,8 +354,18 @@ async function regenerateTfvars() {
   }
 }
 
+async function loadNetboxUrl() {
+  try {
+    const response = await api.get('/api/settings/netbox-url')
+    netboxUrl.value = response.data.url
+  } catch (e) {
+    console.error('NetBox URL laden fehlgeschlagen:', e)
+  }
+}
+
 onMounted(() => {
   loadStats()
   loadProxmoxNodes()
+  loadNetboxUrl()
 })
 </script>

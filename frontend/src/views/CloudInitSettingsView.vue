@@ -3,10 +3,10 @@
     <v-row>
       <v-col cols="12">
         <div class="d-flex align-center mb-4">
-          <v-icon size="32" color="primary" class="mr-3">mdi-cloud-upload</v-icon>
+          <v-icon size="32" color="primary" class="mr-3">mdi-cog</v-icon>
           <div>
-            <h1 class="text-h4">Cloud-Init Konfiguration</h1>
-            <p class="text-body-2 text-grey">SSH-Keys, Admin-Benutzer und NAS Snippets</p>
+            <h1 class="text-h4">Verwaltung</h1>
+            <p class="text-body-2 text-grey">Cloud-Init, SSH-Keys und externe Dienste</p>
           </div>
         </div>
       </v-col>
@@ -92,6 +92,53 @@
             <v-alert type="warning" variant="tonal" density="compact">
               Phone-Home ist deaktiviert. VMs werden nicht zurueckmelden wenn Cloud-Init abgeschlossen ist.
             </v-alert>
+          </v-card-text>
+        </v-card>
+
+        <!-- NetBox Externe URL -->
+        <v-card class="mb-4">
+          <v-card-title class="d-flex align-center">
+            <v-icon class="mr-2">mdi-ip-network-outline</v-icon>
+            NetBox Integration
+            <v-spacer></v-spacer>
+            <v-chip
+              :color="netboxUrl ? 'success' : 'warning'"
+              size="small"
+              variant="tonal"
+            >
+              {{ netboxUrl ? 'Konfiguriert' : 'Nicht konfiguriert' }}
+            </v-chip>
+          </v-card-title>
+
+          <v-card-text>
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              Konfiguriere die externe URL unter der NetBox im Browser erreichbar ist.
+              Diese wird fuer Links im UI verwendet (z.B. Dashboard, VM-Wizard).
+            </v-alert>
+
+            <v-text-field
+              v-model="netboxUrl"
+              label="NetBox Externe URL"
+              prepend-inner-icon="mdi-open-in-new"
+              placeholder="https://netbox.example.com oder http://192.168.1.100:8081"
+              hint="URL unter der NetBox im Browser erreichbar ist"
+              persistent-hint
+              density="compact"
+              clearable
+            ></v-text-field>
+
+            <v-btn
+              color="primary"
+              variant="tonal"
+              size="small"
+              class="mt-4"
+              :loading="savingNetboxUrl"
+              :disabled="netboxUrl === originalNetboxUrl"
+              @click="saveNetboxUrl"
+            >
+              <v-icon start>mdi-content-save</v-icon>
+              URL speichern
+            </v-btn>
           </v-card-text>
         </v-card>
 
@@ -268,6 +315,9 @@ const addingKey = ref(false)
 const deletingKey = ref(null)
 const newSshKey = ref('')
 const sshKeyError = ref('')
+const savingNetboxUrl = ref(false)
+const netboxUrl = ref('')
+const originalNetboxUrl = ref('')
 
 // Settings
 const settings = ref({
@@ -393,9 +443,34 @@ async function removeKey(key) {
   }
 }
 
+async function loadNetboxUrl() {
+  try {
+    const response = await api.get('/api/settings/netbox-url')
+    netboxUrl.value = response.data.url || ''
+    originalNetboxUrl.value = response.data.url || ''
+  } catch (error) {
+    console.error('Fehler beim Laden der NetBox URL:', error)
+  }
+}
+
+async function saveNetboxUrl() {
+  savingNetboxUrl.value = true
+  try {
+    await api.put('/api/settings/netbox-url', { url: netboxUrl.value || null })
+    originalNetboxUrl.value = netboxUrl.value
+    showMessage('NetBox URL gespeichert')
+  } catch (error) {
+    console.error('Fehler beim Speichern:', error)
+    showMessage(error.response?.data?.detail || 'Fehler beim Speichern', 'error')
+  } finally {
+    savingNetboxUrl.value = false
+  }
+}
+
 // Load on mount
 onMounted(() => {
   loadSettings()
+  loadNetboxUrl()
 })
 </script>
 

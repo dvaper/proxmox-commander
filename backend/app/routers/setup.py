@@ -70,6 +70,7 @@ class SetupConfig(BaseModel):
     secret_key: Optional[str] = None  # Wird generiert wenn nicht angegeben
     netbox_token: Optional[str] = None
     netbox_url: Optional[str] = None  # Fuer externes NetBox
+    netbox_external_url: Optional[str] = None  # Externe URL fuer Browser-Links
     default_ssh_user: str = "ansible"
     ansible_remote_user: str = "ansible"
 
@@ -661,6 +662,17 @@ async def save_setup(config: SetupConfig, force: bool = False):
                 logger.info("Cloud-Init Settings in DB gespeichert")
         except Exception as e:
             logger.warning(f"Cloud-Init Settings konnten nicht gespeichert werden: {e}")
+            # Kein Fehler - Setup kann trotzdem erfolgreich sein
+
+        # NetBox External URL in DB speichern
+        try:
+            async with async_session() as db:
+                from app.services.settings_service import get_settings_service
+                settings_service = get_settings_service(db)
+                await settings_service.set_netbox_external_url(config.netbox_external_url)
+                logger.info(f"NetBox External URL gespeichert: {config.netbox_external_url}")
+        except Exception as e:
+            logger.warning(f"NetBox External URL konnte nicht gespeichert werden: {e}")
             # Kein Fehler - Setup kann trotzdem erfolgreich sein
 
     except Exception as e:
