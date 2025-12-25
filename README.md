@@ -108,18 +108,25 @@ pveum user token add terraform@pve terraform-token --privsep=0
 
 ## Installation
 
-### 1. Repository klonen
+### Quick Start (Empfohlen)
 
-```bash
-git clone https://gitlab.newsxc.net/darthvaper/docker-proxmox-commander.git
-cd docker-proxmox-commander
-```
-
-**Oder nur die benoetigten Dateien:**
 ```bash
 mkdir proxmox-commander && cd proxmox-commander
-curl -LO https://gitlab.newsxc.net/darthvaper/docker-proxmox-commander/-/raw/main/docker-compose.yml
-curl -LO https://gitlab.newsxc.net/darthvaper/docker-proxmox-commander/-/raw/main/.env.example
+curl -LO https://raw.githubusercontent.com/dvaper/proxmox-commander/main/docker-compose.yml
+docker compose up -d
+# Browser: http://<server-ip>:8080/setup
+```
+
+### Vollstaendiges Repository klonen
+
+```bash
+git clone https://github.com/dvaper/proxmox-commander.git
+cd proxmox-commander
+```
+
+**Optional: .env.example kopieren**
+```bash
+curl -LO https://raw.githubusercontent.com/dvaper/proxmox-commander/main/.env.example
 cp .env.example .env
 ```
 
@@ -162,13 +169,13 @@ Login mit den im Wizard angegebenen Credentials.
 
 ## Ports und Services
 
-| Service | Port / Pfad | Beschreibung |
-|---------|-------------|--------------|
+| Service | Port | Beschreibung |
+|---------|------|--------------|
 | Proxmox Commander | 8080 | Haupt-Webinterface |
-| NetBox | 8081 oder `/netbox/` | IPAM/DCIM Webinterface |
+| NetBox | 8081 | IPAM/DCIM Webinterface |
 
-> **Tipp:** Bei Verwendung eines Reverse Proxy (NPM, Traefik) ist NetBox auch ueber
-> `https://your-domain/netbox/` erreichbar - kein separater Port noetig.
+> **Tipp:** Die NetBox URL kann unter "Verwaltung > NetBox Integration" konfiguriert werden,
+> um Links im UI (z.B. Dashboard, VM-Wizard) auf eine externe URL zu setzen.
 
 **Interne Services (nicht von aussen erreichbar):**
 - PostgreSQL (NetBox Datenbank)
@@ -200,6 +207,12 @@ Nach dem Start werden unter `./data/` erstellt:
 cd proxmox-commander
 docker compose pull
 docker compose up -d
+```
+
+**Spezifische Version installieren:**
+```bash
+VERSION=v0.3.0 docker compose pull
+VERSION=v0.3.0 docker compose up -d
 ```
 
 **Hinweis:** Datenbank-Migrationen werden automatisch beim Start ausgefuehrt.
@@ -289,7 +302,7 @@ flowchart TB
         end
 
         subgraph NetBoxStack["NetBox Stack"]
-            netbox["NetBox\n:8081 + /netbox/"]
+            netbox["NetBox\n:8081"]
             postgres[(PostgreSQL)]
             redis[(Redis)]
         end
@@ -303,7 +316,6 @@ flowchart TB
     end
 
     nginx -->|"/api/*"| fastapi
-    nginx -->|"/netbox/*"| netbox
     fastapi --> sqlite
     fastapi --> netbox
     netbox --> postgres
@@ -333,7 +345,7 @@ Die einfachste Methode fuer eine neue Umgebung:
 ```bash
 # 1. Nur docker-compose.yml herunterladen
 mkdir proxmox-commander && cd proxmox-commander
-curl -LO https://github.com/YOUR-REPO/docker-proxmox-commander/raw/main/docker-compose.yml
+curl -LO https://raw.githubusercontent.com/dvaper/proxmox-commander/main/docker-compose.yml
 
 # 2. Container starten
 docker compose up -d
