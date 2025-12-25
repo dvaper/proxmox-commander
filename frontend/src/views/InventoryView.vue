@@ -187,6 +187,17 @@
               </v-chip>
             </template>
 
+            <template v-slot:item.status="{ item }">
+              <v-chip
+                size="small"
+                :color="getStatusColor(getHostStatus(item))"
+                variant="flat"
+              >
+                <v-icon start size="small">{{ getStatusIcon(getHostStatus(item)) }}</v-icon>
+                {{ getHostStatus(item) }}
+              </v-chip>
+            </template>
+
             <template v-slot:item.groups="{ item }">
               <v-chip
                 v-for="g in item.groups.slice(0, 3)"
@@ -438,6 +449,7 @@ const isProtectedGroup = (name) => protectedGroups.includes(name)
 const loading = ref(false)
 const hosts = ref([])
 const groups = ref([])
+const vmStatus = ref({})
 const hostSearch = ref('')
 const groupSearch = ref('')
 const selectedGroup = ref(null)
@@ -477,6 +489,7 @@ const groupHeaders = [
 
 const hostHeaders = [
   { title: 'Name', key: 'name' },
+  { title: 'Status', key: 'status', width: '100px' },
   { title: 'IP', key: 'ansible_host' },
   { title: 'VMID', key: 'vmid', width: '80px' },
   { title: 'Node', key: 'pve_node' },
@@ -506,16 +519,45 @@ const filteredHosts = computed(() => {
 async function loadData() {
   loading.value = true
   try {
-    const [hostsRes, groupsRes] = await Promise.all([
+    const [hostsRes, groupsRes, statusRes] = await Promise.all([
       api.get('/api/inventory/hosts'),
       api.get('/api/inventory/groups'),
+      api.get('/api/inventory/vm-status'),
     ])
     hosts.value = hostsRes.data
     groups.value = groupsRes.data
+    vmStatus.value = statusRes.data.vms || {}
   } catch (e) {
     console.error('Laden fehlgeschlagen:', e)
   } finally {
     loading.value = false
+  }
+}
+
+// Hilfsfunktion: Status für einen Host ermitteln
+function getHostStatus(host) {
+  if (!host.vmid) return 'unknown'
+  const status = vmStatus.value[String(host.vmid)]
+  return status?.status || 'unknown'
+}
+
+// Hilfsfunktion: Status-Farbe ermitteln
+function getStatusColor(status) {
+  switch (status) {
+    case 'running': return 'success'
+    case 'stopped': return 'error'
+    case 'paused': return 'warning'
+    default: return 'grey'
+  }
+}
+
+// Hilfsfunktion: Status-Icon ermitteln
+function getStatusIcon(status) {
+  switch (status) {
+    case 'running': return 'mdi-play-circle'
+    case 'stopped': return 'mdi-stop-circle'
+    case 'paused': return 'mdi-pause-circle'
+    default: return 'mdi-help-circle'
   }
 }
 

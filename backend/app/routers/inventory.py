@@ -660,3 +660,35 @@ async def update_sync_settings(
         "message": f"Sync-Intervall auf {interval_seconds}s gesetzt",
         "status": sync_service.get_status()
     }
+
+
+@router.get("/vm-status")
+async def get_vm_status(
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Holt den aktuellen Status aller VMs aus Proxmox.
+
+    Gibt ein Dictionary zurück mit VMID als Key und Status-Info als Value.
+    Kann mit dem Inventory abgeglichen werden über das vmid-Feld.
+    """
+    from app.services.proxmox_service import ProxmoxService
+
+    proxmox = ProxmoxService()
+    if not proxmox.is_configured():
+        return {"configured": False, "vms": {}}
+
+    try:
+        vms = await proxmox.get_all_vms()
+        # Dictionary mit vmid als Key für schnellen Lookup
+        vm_status = {
+            str(vm["vmid"]): {
+                "status": vm.get("status", "unknown"),
+                "name": vm.get("name", ""),
+                "node": vm.get("node", ""),
+            }
+            for vm in vms
+        }
+        return {"configured": True, "vms": vm_status}
+    except Exception as e:
+        return {"configured": True, "error": str(e), "vms": {}}
