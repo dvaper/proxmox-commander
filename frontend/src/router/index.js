@@ -134,6 +134,18 @@ const routes = [
     component: () => import('@/views/SSHSettingsView.vue'),
     meta: { requiresAuth: true, requiresSuperAdmin: true },
   },
+  {
+    path: '/settings/proxmox',
+    name: 'ProxmoxSettings',
+    component: () => import('@/views/ProxmoxSettingsView.vue'),
+    meta: { requiresAuth: true, requiresSuperAdmin: true },
+  },
+  {
+    path: '/settings/netbox-users',
+    name: 'NetBoxUsers',
+    component: () => import('@/views/NetBoxUsersView.vue'),
+    meta: { requiresAuth: true, requiresSuperAdmin: true },
+  },
 ]
 
 const router = createRouter({

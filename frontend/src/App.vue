@@ -96,14 +96,38 @@
           subtitle="Execution History"
         ></v-list-item>
 
-        <!-- Verwaltung (nur für Super-Admin) -->
+        <!-- Einstellungen (nur für Super-Admin) -->
         <template v-if="authStore.isSuperAdmin">
-          <v-list-subheader class="mt-2">VERWALTUNG</v-list-subheader>
+          <v-list-subheader class="mt-2">EINSTELLUNGEN</v-list-subheader>
+
+          <!-- Benutzer (Untermenü) -->
+          <v-list-group value="users">
+            <template v-slot:activator="{ props }">
+              <v-list-item
+                v-bind="props"
+                prepend-icon="mdi-account-group"
+                title="Benutzer"
+              ></v-list-item>
+            </template>
+            <v-list-item
+              to="/users"
+              prepend-icon="mdi-account-multiple"
+              title="App-Benutzer"
+              subtitle="Proxmox Commander"
+            ></v-list-item>
+            <v-list-item
+              to="/settings/netbox-users"
+              prepend-icon="mdi-account-network"
+              title="NetBox-Benutzer"
+              subtitle="IPAM/DCIM Zugang"
+            ></v-list-item>
+          </v-list-group>
+
           <v-list-item
-            to="/users"
-            prepend-icon="mdi-account-group"
-            title="Benutzer"
-            subtitle="Benutzer & Rollen"
+            to="/settings/proxmox"
+            prepend-icon="mdi-server"
+            title="Proxmox"
+            subtitle="API-Verbindung"
           ></v-list-item>
           <v-list-item
             to="/settings/notifications"
@@ -364,7 +388,9 @@ const pageTitles = {
   '/playbooks': 'Playbooks',
   '/inventory': 'Inventory',
   '/executions': 'Ausführungen',
-  '/users': 'Benutzer',
+  '/users': 'App-Benutzer',
+  '/settings/netbox-users': 'NetBox-Benutzer',
+  '/settings/proxmox': 'Proxmox-Einstellungen',
   '/settings/notifications': 'Benachrichtigungen',
   '/settings/cloud-init': 'Cloud-Init',
   '/settings/ssh': 'SSH-Einstellungen',
