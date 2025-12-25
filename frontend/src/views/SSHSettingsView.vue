@@ -13,16 +13,8 @@
           </div>
         </div>
 
-        <!-- Loading -->
-        <v-card v-if="loading" class="mb-4">
-          <v-card-text class="text-center py-8">
-            <v-progress-circular indeterminate size="48" color="primary"></v-progress-circular>
-            <div class="mt-4 text-grey">Lade SSH-Konfiguration...</div>
-          </v-card-text>
-        </v-card>
-
         <!-- Hauptkarte -->
-        <v-card v-else>
+        <v-card>
           <v-card-title class="d-flex align-center">
             <v-icon start>mdi-ansible</v-icon>
             SSH / Ansible Konfiguration
@@ -177,7 +169,6 @@ const showSnackbar = inject('showSnackbar', null)
 
 // Refs
 const sshKeyManager = ref(null)
-const loading = ref(true)
 const saving = ref(false)
 const currentUser = ref('')
 const pendingUser = ref('')
@@ -214,7 +205,6 @@ function handleConfigLoaded(config) {
     currentUser.value = config.ssh_user
     pendingUser.value = config.ssh_user
   }
-  loading.value = false
 }
 
 // Benutzer speichern
