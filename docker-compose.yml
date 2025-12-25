@@ -35,7 +35,7 @@ services:
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
       - DEBUG=${DEBUG:-false}
       - NETBOX_URL=http://netbox:8080
-      - NETBOX_TOKEN=${NETBOX_TOKEN:-}
+      # NETBOX_TOKEN wird aus env_file geladen (Setup-Wizard)
       - DATA_DIR=/data
       - INVENTORY_DIR=/data/inventory
       - PLAYBOOKS_DIR=/data/playbooks
