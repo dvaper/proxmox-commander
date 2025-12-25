@@ -42,10 +42,11 @@ class AnsibleService:
             extra_vars,
         )
 
-        # Umgebungsvariablen: ANSIBLE_FORCE_COLOR für farbige Ausgabe
+        # Umgebungsvariablen für Ansible
         env = os.environ.copy()
         env["ANSIBLE_FORCE_COLOR"] = "1"
         env["PYTHONUNBUFFERED"] = "1"
+        env["ANSIBLE_HOST_KEY_CHECKING"] = "False"
 
         # ExecutionRunner übernimmt Status-Tracking, Log-Streaming und DB-Speicherung
         runner = ExecutionRunner(
