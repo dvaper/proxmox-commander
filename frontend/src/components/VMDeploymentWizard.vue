@@ -489,10 +489,9 @@ const availableIPs = ref([])
 const selectedIP = ref(null)
 const ipMode = ref('auto')
 const ipamError = ref(false)
-// NetBox URL: gleicher Host wie App, Port 8081
+// NetBox URL: ueber /netbox/ Subpfad (funktioniert mit Reverse Proxy)
 const netboxUrl = computed(() => {
-  const host = window.location.hostname
-  return `http://${host}:8081`
+  return `${window.location.origin}/netbox/`
 })
 const validation = ref(null)
 const preview = ref(null)

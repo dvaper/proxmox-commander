@@ -199,10 +199,9 @@ import { formatDate, getStatusColor, getStatusIcon } from '@/utils/formatting'
 
 const router = useRouter()
 
-// NetBox URL: gleicher Host, Port 8081
+// NetBox URL: ueber /netbox/ Subpfad (funktioniert mit Reverse Proxy)
 const netboxUrl = computed(() => {
-  const host = window.location.hostname
-  return `http://${host}:8081`
+  return `${window.location.origin}/netbox/`
 })
 
 const stats = ref({
