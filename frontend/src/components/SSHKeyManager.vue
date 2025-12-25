@@ -119,6 +119,28 @@
 
     <!-- Upload-Modus -->
     <div v-if="keyMode === 'upload'" class="mb-4">
+      <!-- File Picker -->
+      <div class="d-flex align-center gap-2 mb-3">
+        <v-btn
+          variant="outlined"
+          color="secondary"
+          @click="triggerFilePicker"
+        >
+          <v-icon start>mdi-file-key</v-icon>
+          Datei auswaehlen
+        </v-btn>
+        <span v-if="selectedFileName" class="text-body-2 text-grey">
+          {{ selectedFileName }}
+        </span>
+        <input
+          ref="fileInput"
+          type="file"
+          style="display: none"
+          accept=".pem,.key,id_*"
+          @change="handleFileSelect"
+        />
+      </div>
+
       <v-textarea
         v-model="uploadPrivateKey"
         label="Private Key"
@@ -128,7 +150,7 @@
         density="compact"
         rows="6"
         class="text-mono"
-        :hint="uploadPrivateKey ? 'Key erkannt' : 'Private Key einfuegen'"
+        :hint="uploadPrivateKey ? 'Key erkannt' : 'Datei auswaehlen oder Key einfuegen'"
         persistent-hint
       ></v-textarea>
 
@@ -277,7 +299,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import axios from 'axios'
+import api from '@/api/client'
 
 const props = defineProps({
   // Initialer SSH-Benutzer
@@ -317,6 +339,8 @@ const currentConfig = ref(null)
 const availableKeys = ref([])
 const selectedKey = ref(null)
 const uploadPrivateKey = ref('')
+const fileInput = ref(null)
+const selectedFileName = ref('')
 const generateKeyType = ref('ed25519')
 const generatedPublicKey = ref('')
 const testHost = ref('')
@@ -389,11 +413,31 @@ async function copyPublicKey(key) {
   }
 }
 
+function triggerFilePicker() {
+  fileInput.value?.click()
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  selectedFileName.value = file.name
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    uploadPrivateKey.value = e.target.result
+  }
+  reader.onerror = () => {
+    showMessage('Datei konnte nicht gelesen werden', 'error')
+  }
+  reader.readAsText(file)
+}
+
 async function loadConfig() {
   loading.value = true
   try {
     // Verfuegbare Keys laden
-    const keysResponse = await axios.get(endpoints.value.keys)
+    const keysResponse = await api.get(endpoints.value.keys)
     availableKeys.value = keysResponse.data.keys || []
     currentConfig.value = {
       has_key: !!keysResponse.data.current_key,
@@ -429,7 +473,7 @@ async function importKey() {
 
   importing.value = true
   try {
-    const response = await axios.post(endpoints.value.import, {
+    const response = await api.post(endpoints.value.import, {
       source_path: selectedKey.value.path,
     })
 
@@ -452,7 +496,7 @@ async function uploadKey() {
 
   uploading.value = true
   try {
-    const response = await axios.post(endpoints.value.upload, {
+    const response = await api.post(endpoints.value.upload, {
       private_key: uploadPrivateKey.value,
     })
 
@@ -477,7 +521,7 @@ async function uploadKey() {
 async function generateKey() {
   generating.value = true
   try {
-    const response = await axios.post(endpoints.value.generate, {
+    const response = await api.post(endpoints.value.generate, {
       key_type: generateKeyType.value,
       comment: `${sshUser.value}@proxmox-commander`,
     })
@@ -503,7 +547,7 @@ async function testConnection() {
   testing.value = true
   testResult.value = null
   try {
-    const response = await axios.post(endpoints.value.test, {
+    const response = await api.post(endpoints.value.test, {
       host: testHostValue.value,
       user: sshUser.value,
     })
