@@ -230,23 +230,19 @@
                       <v-expansion-panel-title>
                         <v-icon class="mr-2" size="small">mdi-ansible</v-icon>
                         Ansible / SSH
+                        <v-chip v-if="sshKeyConfigured" color="success" size="x-small" class="ml-2">
+                          OK
+                        </v-chip>
                       </v-expansion-panel-title>
                       <v-expansion-panel-text>
-                        <v-text-field
-                          v-model="config.ansible_remote_user"
-                          label="SSH-Benutzer für Ansible"
-                          prepend-inner-icon="mdi-account"
-                          hint="Benutzer auf den Ziel-VMs"
-                          persistent-hint
-                          variant="outlined"
-                          density="compact"
-                          class="mb-4"
-                        ></v-text-field>
-
-                        <v-alert type="info" variant="tonal" density="compact">
-                          Der SSH-Key muss unter <code>data/ssh/id_ed25519</code> abgelegt werden.
-                          Der Public Key muss auf allen Ziel-VMs hinterlegt sein.
-                        </v-alert>
+                        <SSHKeyManager
+                          ref="sshKeyManager"
+                          :initial-user="config.ansible_remote_user"
+                          api-prefix="/api/setup"
+                          @update:user="handleSshUserChange"
+                          @key-changed="handleSshKeyChanged"
+                          @config-loaded="handleSshConfigLoaded"
+                        />
                       </v-expansion-panel-text>
                     </v-expansion-panel>
 
@@ -692,6 +688,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import axios from 'axios'
+import SSHKeyManager from '@/components/SSHKeyManager.vue'
 
 // Stepper State
 const step = ref(1)
@@ -748,6 +745,27 @@ const saving = ref(false)
 const testResult = ref(null)
 const showSuccessDialog = ref(false)
 const redirectingToLogin = ref(false)
+
+// SSH Key Manager
+const sshKeyManager = ref(null)
+const sshKeyConfigured = ref(false)
+
+function handleSshUserChange(newUser) {
+  config.value.ansible_remote_user = newUser
+  config.value.default_ssh_user = newUser
+}
+
+function handleSshKeyChanged(result) {
+  sshKeyConfigured.value = true
+}
+
+function handleSshConfigLoaded(sshConfig) {
+  sshKeyConfigured.value = sshConfig?.has_key || false
+  if (sshConfig?.ssh_user && sshConfig.ssh_user !== 'ansible') {
+    config.value.ansible_remote_user = sshConfig.ssh_user
+    config.value.default_ssh_user = sshConfig.ssh_user
+  }
+}
 
 // Validation Errors
 const errors = ref({

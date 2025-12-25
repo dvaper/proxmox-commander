@@ -51,8 +51,11 @@ services:
       - ./data/playbooks:/data/playbooks
       - ./data/roles:/data/roles
       - ./data/terraform:/data/terraform
-      - ./data/ssh:/data/ssh:ro
+      - ./data/ssh:/data/ssh
       - ./data/config:/data/config
+      # Optional: Host SSH-Keys fuer Import im Setup-Wizard
+      # Aktivieren um bestehende SSH-Keys zu importieren:
+      # - ~/.ssh:/host-ssh:ro
     networks:
       - proxmox-commander
 

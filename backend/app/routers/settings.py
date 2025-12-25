@@ -147,3 +147,121 @@ async def set_netbox_url(
     settings_service = get_settings_service(db)
     await settings_service.set_netbox_external_url(data.url)
     return NetBoxUrlResponse(url=data.url)
+
+
+# ==================== SSH Einstellungen ====================
+
+from app.services.ssh_service import (
+    get_ssh_service,
+    SSHKeyListResponse,
+    SSHKeyImportRequest,
+    SSHKeyImportResponse,
+    SSHKeyUploadRequest,
+    SSHKeyUploadResponse,
+    SSHKeyGenerateRequest,
+    SSHKeyGenerateResponse,
+    SSHTestRequest,
+    SSHTestResponse,
+    SSHConfigResponse,
+    SSHConfigUpdateRequest,
+)
+
+
+@router.get("/ssh", response_model=SSHConfigResponse)
+async def get_ssh_config(
+    current_user: User = Depends(get_current_super_admin_user),
+):
+    """
+    Aktuelle SSH-Konfiguration abrufen (nur Super-Admin).
+
+    Gibt den konfigurierten SSH-Benutzer und Key-Informationen zurueck.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.get_config()
+
+
+@router.put("/ssh", response_model=SSHConfigResponse)
+async def update_ssh_config(
+    request: SSHConfigUpdateRequest,
+    current_user: User = Depends(get_current_super_admin_user),
+):
+    """
+    SSH-Konfiguration aktualisieren (nur Super-Admin).
+
+    Aendert den SSH-Benutzer fuer Ansible-Verbindungen.
+    Die Aenderung wird sofort wirksam (Hot-Reload).
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.update_config(request)
+
+
+@router.get("/ssh/keys", response_model=SSHKeyListResponse)
+async def list_ssh_keys(
+    current_user: User = Depends(get_current_super_admin_user),
+):
+    """
+    Verfuegbare SSH-Keys auflisten (nur Super-Admin).
+
+    Zeigt Keys aus dem gemounteten Host-SSH-Verzeichnis (/host-ssh)
+    sowie den aktuell konfigurierten Key.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.list_available_keys()
+
+
+@router.post("/ssh/import", response_model=SSHKeyImportResponse)
+async def import_ssh_key(
+    request: SSHKeyImportRequest,
+    current_user: User = Depends(get_current_super_admin_user),
+):
+    """
+    SSH-Key aus Host-SSH-Verzeichnis importieren (nur Super-Admin).
+
+    Der Key wird nach data/ssh/ kopiert.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.import_key(request)
+
+
+@router.post("/ssh/upload", response_model=SSHKeyUploadResponse)
+async def upload_ssh_key(
+    request: SSHKeyUploadRequest,
+    current_user: User = Depends(get_current_super_admin_user),
+):
+    """
+    SSH-Key per Copy/Paste hochladen (nur Super-Admin).
+
+    Der Private Key wird validiert und gespeichert.
+    Falls kein Public Key mitgeliefert wird, wird dieser automatisch generiert.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.upload_key(request)
+
+
+@router.post("/ssh/generate", response_model=SSHKeyGenerateResponse)
+async def generate_ssh_key(
+    request: SSHKeyGenerateRequest,
+    current_user: User = Depends(get_current_super_admin_user),
+):
+    """
+    Neues SSH-Schluesselpaar generieren (nur Super-Admin).
+
+    Unterstuetzte Key-Typen: ed25519 (empfohlen), rsa (4096 bit).
+    Der Public Key muss auf den Ziel-VMs hinterlegt werden.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.generate_key(request)
+
+
+@router.post("/ssh/test", response_model=SSHTestResponse)
+async def test_ssh_connection(
+    request: SSHTestRequest,
+    current_user: User = Depends(get_current_super_admin_user),
+):
+    """
+    SSH-Verbindung zu einem Host testen (nur Super-Admin).
+
+    Prueft Erreichbarkeit und Authentifizierung.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.test_connection(request)

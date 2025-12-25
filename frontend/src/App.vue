@@ -117,6 +117,12 @@
             title="Cloud-Init"
             subtitle="SSH-Keys, Admin-User"
           ></v-list-item>
+          <v-list-item
+            to="/settings/ssh"
+            prepend-icon="mdi-key-chain"
+            title="SSH"
+            subtitle="Ansible SSH-Keys"
+          ></v-list-item>
         </template>
       </v-list>
 
@@ -361,6 +367,7 @@ const pageTitles = {
   '/users': 'Benutzer',
   '/settings/notifications': 'Benachrichtigungen',
   '/settings/cloud-init': 'Cloud-Init',
+  '/settings/ssh': 'SSH-Einstellungen',
 }
 
 // Setup-Route erkennen (keine Navigation anzeigen)

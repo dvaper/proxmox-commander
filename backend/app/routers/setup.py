@@ -690,3 +690,92 @@ async def generate_secret():
     Kann im Frontend verwendet werden um einen sicheren Key zu generieren.
     """
     return {"secret_key": generate_secret_key()}
+
+
+# =============================================================================
+# SSH Endpoints (fuer Setup-Wizard)
+# =============================================================================
+
+from app.services.ssh_service import (
+    get_ssh_service,
+    SSHKeyListResponse,
+    SSHKeyImportRequest,
+    SSHKeyImportResponse,
+    SSHKeyUploadRequest,
+    SSHKeyUploadResponse,
+    SSHKeyGenerateRequest,
+    SSHKeyGenerateResponse,
+    SSHTestRequest,
+    SSHTestResponse,
+)
+
+
+@router.get("/ssh-keys", response_model=SSHKeyListResponse)
+async def list_ssh_keys():
+    """
+    Listet verfuegbare SSH-Keys auf.
+
+    Zeigt Keys aus dem gemounteten Host-SSH-Verzeichnis (/host-ssh)
+    sowie den aktuell konfigurierten Key.
+
+    Dieser Endpoint ist ohne Authentifizierung zugaenglich.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.list_available_keys()
+
+
+@router.post("/ssh-import", response_model=SSHKeyImportResponse)
+async def import_ssh_key(request: SSHKeyImportRequest):
+    """
+    Importiert einen SSH-Key aus dem gemounteten Host-SSH-Verzeichnis.
+
+    Der Key wird nach data/ssh/ kopiert und kann dann fuer Ansible verwendet werden.
+
+    Dieser Endpoint ist ohne Authentifizierung zugaenglich.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.import_key(request)
+
+
+@router.post("/ssh-upload", response_model=SSHKeyUploadResponse)
+async def upload_ssh_key(request: SSHKeyUploadRequest):
+    """
+    Speichert einen per Copy/Paste uebermittelten SSH-Key.
+
+    Der Private Key wird validiert und nach data/ssh/ gespeichert.
+    Falls kein Public Key mitgeliefert wird, wird dieser automatisch generiert.
+
+    Dieser Endpoint ist ohne Authentifizierung zugaenglich.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.upload_key(request)
+
+
+@router.post("/ssh-generate", response_model=SSHKeyGenerateResponse)
+async def generate_ssh_key(request: SSHKeyGenerateRequest):
+    """
+    Generiert ein neues SSH-Schluesselpaar.
+
+    Unterstuetzte Key-Typen: ed25519 (empfohlen), rsa (4096 bit).
+    Der generierte Public Key wird zurueckgegeben und muss auf den
+    Ziel-VMs in authorized_keys hinterlegt werden.
+
+    Dieser Endpoint ist ohne Authentifizierung zugaenglich.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.generate_key(request)
+
+
+@router.post("/ssh-test", response_model=SSHTestResponse)
+async def test_ssh_connection(request: SSHTestRequest):
+    """
+    Testet die SSH-Verbindung zu einem Host.
+
+    Prueft:
+    1. Ob der Host auf Port 22 (oder angegebenem Port) erreichbar ist
+    2. Ob die SSH-Authentifizierung mit dem konfigurierten Key funktioniert
+
+    Dieser Endpoint ist ohne Authentifizierung zugaenglich.
+    """
+    ssh_service = get_ssh_service()
+    return await ssh_service.test_connection(request)

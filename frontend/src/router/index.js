@@ -128,6 +128,12 @@ const routes = [
     component: () => import('@/views/CloudInitSettingsView.vue'),
     meta: { requiresAuth: true, requiresSuperAdmin: true },
   },
+  {
+    path: '/settings/ssh',
+    name: 'SSHSettings',
+    component: () => import('@/views/SSHSettingsView.vue'),
+    meta: { requiresAuth: true, requiresSuperAdmin: true },
+  },
 ]
 
 const router = createRouter({
