@@ -46,6 +46,7 @@
               :initial-user="currentUser"
               :show-warnings="true"
               api-prefix="/api/settings/ssh"
+              endpoint-mode="settings"
               :inventory-hosts="inventoryHosts"
               @update:user="handleUserChange"
               @key-changed="handleKeyChanged"

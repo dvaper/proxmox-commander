@@ -295,6 +295,12 @@ const props = defineProps({
     type: String,
     default: '/api/setup',
   },
+  // Endpoint-Suffix-Modus: 'setup' = /ssh-keys, 'settings' = /keys
+  endpointMode: {
+    type: String,
+    default: 'setup',
+    validator: (v) => ['setup', 'settings'].includes(v),
+  },
   // Inventory-Hosts fuer Verbindungstest
   inventoryHosts: {
     type: Array,
@@ -338,6 +344,29 @@ const userHint = computed(() => {
 
 const showInventoryHint = computed(() => props.inventoryHosts.length > 0)
 
+// Endpoint-Pfade basierend auf Modus
+const endpoints = computed(() => {
+  if (props.endpointMode === 'settings') {
+    // Settings-Modus: /api/settings/ssh/keys, /api/settings/ssh/import, etc.
+    return {
+      keys: `${props.apiPrefix}/keys`,
+      import: `${props.apiPrefix}/import`,
+      upload: `${props.apiPrefix}/upload`,
+      generate: `${props.apiPrefix}/generate`,
+      test: `${props.apiPrefix}/test`,
+    }
+  } else {
+    // Setup-Modus: /api/setup/ssh-keys, /api/setup/ssh-import, etc.
+    return {
+      keys: `${props.apiPrefix}/ssh-keys`,
+      import: `${props.apiPrefix}/ssh-import`,
+      upload: `${props.apiPrefix}/ssh-upload`,
+      generate: `${props.apiPrefix}/ssh-generate`,
+      test: `${props.apiPrefix}/ssh-test`,
+    }
+  }
+})
+
 const testHostValue = computed(() => {
   if (!testHost.value) return ''
   if (typeof testHost.value === 'string') return testHost.value
@@ -364,7 +393,7 @@ async function loadConfig() {
   loading.value = true
   try {
     // Verfuegbare Keys laden
-    const keysResponse = await axios.get(`${props.apiPrefix}/ssh-keys`)
+    const keysResponse = await axios.get(endpoints.value.keys)
     availableKeys.value = keysResponse.data.keys || []
     currentConfig.value = {
       has_key: !!keysResponse.data.current_key,
@@ -398,7 +427,7 @@ async function importKey() {
 
   importing.value = true
   try {
-    const response = await axios.post(`${props.apiPrefix}/ssh-import`, {
+    const response = await axios.post(endpoints.value.import, {
       source_path: selectedKey.value.path,
     })
 
@@ -421,7 +450,7 @@ async function uploadKey() {
 
   uploading.value = true
   try {
-    const response = await axios.post(`${props.apiPrefix}/ssh-upload`, {
+    const response = await axios.post(endpoints.value.upload, {
       private_key: uploadPrivateKey.value,
     })
 
@@ -446,7 +475,7 @@ async function uploadKey() {
 async function generateKey() {
   generating.value = true
   try {
-    const response = await axios.post(`${props.apiPrefix}/ssh-generate`, {
+    const response = await axios.post(endpoints.value.generate, {
       key_type: generateKeyType.value,
       comment: `${sshUser.value}@proxmox-commander`,
     })
@@ -472,7 +501,7 @@ async function testConnection() {
   testing.value = true
   testResult.value = null
   try {
-    const response = await axios.post(`${props.apiPrefix}/ssh-test`, {
+    const response = await axios.post(endpoints.value.test, {
       host: testHostValue.value,
       user: sshUser.value,
     })
