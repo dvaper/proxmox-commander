@@ -73,6 +73,7 @@ class AnsibleService:
             "ansible-playbook",
             str(playbook_path),
             "-i", str(self.inventory_path),
+            "--private-key", settings.ssh_key_path,
         ]
 
         # Limit (Hosts und Gruppen kombinieren)
