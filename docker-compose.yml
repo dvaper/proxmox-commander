@@ -42,9 +42,9 @@ services:
       - ROLES_DIR=/data/roles
       - TERRAFORM_DIR=/data/terraform
       - SSH_KEY_PATH=/data/ssh/id_ed25519
-      - ENV_FILE=/app/.env
-      # Proxmox API, Ansible, SSH werden direkt aus .env gelesen
-      # (nicht hier setzen - sonst funktioniert Hot-Reload nicht)
+      - ENV_FILE=/data/config/.env
+      # Proxmox API, Ansible, SSH werden aus /data/config/.env gelesen
+      # (wird vom Setup-Wizard erstellt)
     volumes:
       - ./data/db:/data/db
       - ./data/inventory:/data/inventory
@@ -53,7 +53,6 @@ services:
       - ./data/terraform:/data/terraform
       - ./data/ssh:/data/ssh:ro
       - ./data/config:/data/config
-      - ./.env:/app/.env:rw
     networks:
       - proxmox-commander
 

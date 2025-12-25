@@ -1,19 +1,8 @@
 #!/bin/bash
 # Entrypoint Script fuer Proxmox Commander API
 
-# Fix: Falls .env ein Verzeichnis ist (Docker-Bug bei nicht-existierenden Bind-Mounts)
-if [ -d "/app/.env" ]; then
-    echo "WARNUNG: /app/.env ist ein Verzeichnis - wird korrigiert..."
-    rm -rf /app/.env
-    touch /app/.env
-    echo ".env als leere Datei erstellt."
-fi
-
-# Falls .env nicht existiert, leere Datei erstellen
-if [ ! -f "/app/.env" ]; then
-    touch /app/.env
-    echo ".env Datei erstellt."
-fi
+# Config-Verzeichnis sicherstellen
+mkdir -p /data/config
 
 # Default-Playbooks kopieren falls Verzeichnis leer ist
 if [ -d "/app/default-data/playbooks" ] && [ -d "/data/playbooks" ]; then
