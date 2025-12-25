@@ -18,9 +18,13 @@ Commit-Konventionen (Conventional Commits):
     refactor: Refactoring -> "Refactoring"
     perf: Performance -> "Performance"
     test: Tests -> "Tests"
-    chore: Wartung -> "Wartung"
     security/sec: Sicherheit -> "Sicherheit"
     ux: UX-Verbesserungen -> "UX"
+
+    Folgende Prefixe werden NICHT ins Changelog aufgenommen:
+    chore: Wartungsarbeiten (Repo-Setup, Konfiguration)
+    build: Build-Aenderungen
+    ci: CI/CD Pipeline-Aenderungen
 """
 
 import json
@@ -43,13 +47,16 @@ COMMIT_CATEGORIES = {
     "refactor": "Refactoring",
     "perf": "Performance",
     "test": "Tests",
-    "chore": "Wartung",
-    "build": "Build",
-    "ci": "CI/CD",
+    "chore": None,  # Nicht ins Changelog
+    "build": None,  # Nicht ins Changelog
+    "ci": None,     # Nicht ins Changelog
     "security": "Sicherheit",
     "sec": "Sicherheit",
     "ux": "UX",
 }
+
+# Kategorien die nicht ins Changelog aufgenommen werden
+SKIP_CATEGORIES = {None, "Sonstiges"}
 
 
 def run_git(args: list[str]) -> str:
@@ -108,20 +115,17 @@ def parse_commits(commits: list[str]) -> dict[str, list[str]]:
 
             category = COMMIT_CATEGORIES.get(prefix, "Sonstiges")
 
+            # Kategorien ueberspringen die nicht ins Changelog gehoeren
+            if category in SKIP_CATEGORIES:
+                continue
+
             if category not in categorized:
                 categorized[category] = []
 
             # Erste Zeile, kapitalisiert
             message = message[0].upper() + message[1:] if message else message
             categorized[category].append(message)
-        else:
-            # Commit ohne Prefix -> Sonstiges
-            parts = commit.split(" ", 1)
-            if len(parts) > 1:
-                message = parts[1]
-                if "Sonstiges" not in categorized:
-                    categorized["Sonstiges"] = []
-                categorized["Sonstiges"].append(message)
+        # Commits ohne Conventional-Commits-Prefix werden ignoriert
 
     return categorized
 
