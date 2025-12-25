@@ -28,7 +28,7 @@ services:
       netbox:
         condition: service_started
     env_file:
-      - path: ./.env
+      - path: ./data/config/.env
         required: false
     environment:
       - TZ=${TZ:-Europe/Berlin}
