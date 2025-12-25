@@ -1,5 +1,15 @@
 [
   {
+    "version": "v0.3.23",
+    "date": "2025-12-25",
+    "changes": {
+      "Bugfixes": [
+        "Proxmox-Verbindungstest für Reverse Proxy korrigiert",
+        "Docker CLI im API-Container für NetBox-Benutzerverwaltung"
+      ]
+    }
+  },
+  {
     "version": "v0.3.5",
     "date": "2025-12-25",
     "changes": {
