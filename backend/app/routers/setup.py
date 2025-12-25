@@ -181,6 +181,171 @@ def generate_netbox_secret_key() -> str:
     return ''.join(secrets.choice(charset) for _ in range(60))
 
 
+def create_env_symlink(env_path: Path) -> bool:
+    """
+    Erstellt einen Symlink von der Root .env zur config .env.
+
+    Docker-Compose Variable-Interpolation (${VAR}) liest aus .env im
+    gleichen Verzeichnis wie docker-compose.yml. Der Setup-Wizard
+    speichert aber nach data/config/.env. Dieser Symlink verbindet beide.
+
+    Returns:
+        True wenn Symlink erstellt oder bereits vorhanden, False bei Fehler
+    """
+    # Finde das Root-Verzeichnis (wo docker-compose.yml liegt)
+    # Im Container: /app -> /data ist das Datenverzeichnis
+    # env_path ist z.B. /data/config/.env
+    # Root waere /app oder das Parent von /data
+
+    # Typische Pfade:
+    # - Container: env_path = /data/config/.env, root = /app (aber /app/.env -> /data/config/.env)
+    # - Host: env_path = /opt/proxmox-commander/data/config/.env, root = /opt/proxmox-commander
+
+    try:
+        # Suche nach docker-compose.yml um Root zu finden
+        possible_roots = [
+            env_path.parent.parent.parent,  # /opt/proxmox-commander/data/config/.env -> /opt/proxmox-commander
+            Path("/opt/proxmox-commander"),
+            Path("/app"),
+        ]
+
+        root_dir = None
+        for root in possible_roots:
+            if (root / "docker-compose.yml").exists():
+                root_dir = root
+                break
+
+        if not root_dir:
+            logger.warning("Konnte docker-compose.yml nicht finden, Symlink wird nicht erstellt")
+            return False
+
+        symlink_path = root_dir / ".env"
+
+        # Pruefen ob bereits korrekt verlinkt
+        if symlink_path.is_symlink():
+            if symlink_path.resolve() == env_path.resolve():
+                logger.info(f"Symlink bereits korrekt: {symlink_path} -> {env_path}")
+                return True
+            else:
+                # Falscher Symlink - entfernen
+                symlink_path.unlink()
+                logger.info(f"Alter Symlink entfernt: {symlink_path}")
+        elif symlink_path.exists():
+            # Regulaere Datei - nicht ueberschreiben
+            logger.warning(f".env existiert als regulaere Datei: {symlink_path}")
+            return False
+
+        # Symlink erstellen
+        symlink_path.symlink_to(env_path)
+        logger.info(f"Symlink erstellt: {symlink_path} -> {env_path}")
+        return True
+
+    except PermissionError:
+        logger.warning(f"Keine Berechtigung zum Erstellen des Symlinks")
+        return False
+    except Exception as e:
+        logger.warning(f"Fehler beim Erstellen des Symlinks: {e}")
+        return False
+
+
+async def sync_netbox_superuser(username: str, password: str, email: str) -> dict:
+    """
+    Synchronisiert den NetBox-Superuser mit den Setup-Wizard Credentials.
+
+    Da NetBox beim ersten Start mit Default-Credentials (admin/admin)
+    initialisiert wird, muessen wir den User nachtraeglich aktualisieren.
+
+    Returns:
+        dict mit success, action, message
+    """
+    import subprocess
+
+    try:
+        # Django-Management-Command im NetBox-Container ausfuehren
+        # Wir verwenden docker exec um das Passwort zu setzen
+
+        # Zuerst pruefen ob der Container laeuft
+        result = subprocess.run(
+            ["docker", "ps", "--filter", "name=proxmox-commander-netbox", "--format", "{{.Names}}"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        if "proxmox-commander-netbox" not in result.stdout:
+            logger.info("NetBox-Container laeuft nicht, Superuser-Sync wird uebersprungen")
+            return {"success": True, "action": "skipped", "message": "NetBox-Container nicht aktiv"}
+
+        # Python-Script zum Aktualisieren des Superusers
+        python_script = f'''
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+# Versuche existierenden admin zu finden und zu aktualisieren
+try:
+    user = User.objects.get(username="admin")
+    user.username = "{username}"
+    user.email = "{email}"
+    user.set_password("{password}")
+    user.is_superuser = True
+    user.is_staff = True
+    user.is_active = True
+    user.save()
+    print("UPDATED:admin->{username}")
+except User.DoesNotExist:
+    # Kein admin User, versuche Ziel-User zu finden
+    try:
+        user = User.objects.get(username="{username}")
+        user.email = "{email}"
+        user.set_password("{password}")
+        user.is_superuser = True
+        user.is_staff = True
+        user.is_active = True
+        user.save()
+        print("UPDATED:{username}")
+    except User.DoesNotExist:
+        # Kein User vorhanden, erstelle neuen
+        user = User.objects.create_superuser("{username}", "{email}", "{password}")
+        print("CREATED:{username}")
+'''
+
+        # Escape fuer Shell
+        escaped_script = python_script.replace('"', '\\"').replace("'", "'\\''")
+
+        # Ausfuehren im Container
+        result = subprocess.run(
+            [
+                "docker", "exec", "proxmox-commander-netbox",
+                "python", "/opt/netbox/netbox/manage.py", "shell", "-c", python_script
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+
+        output = result.stdout.strip()
+
+        if "UPDATED:" in output or "CREATED:" in output:
+            action = "updated" if "UPDATED:" in output else "created"
+            logger.info(f"NetBox-Superuser {action}: {username}")
+            return {"success": True, "action": action, "message": f"NetBox-Superuser {action}"}
+        else:
+            # Fehler in der Ausgabe
+            logger.warning(f"NetBox-Superuser Sync unbekanntes Ergebnis: {output}, stderr: {result.stderr}")
+            return {"success": False, "action": "error", "message": result.stderr or output}
+
+    except subprocess.TimeoutExpired:
+        logger.warning("NetBox-Superuser Sync Timeout")
+        return {"success": False, "action": "timeout", "message": "Timeout beim Sync"}
+    except FileNotFoundError:
+        # Docker nicht verfuegbar (z.B. im Container selbst)
+        logger.info("Docker CLI nicht verfuegbar, NetBox-Sync wird uebersprungen")
+        return {"success": True, "action": "skipped", "message": "Docker CLI nicht verfuegbar"}
+    except Exception as e:
+        logger.warning(f"NetBox-Superuser Sync Fehler: {e}")
+        return {"success": False, "action": "error", "message": str(e)}
+
+
 def quote_env_value(value: str) -> str:
     """
     Quoted einen Wert fuer .env Dateien korrekt.
@@ -520,6 +685,13 @@ async def save_env_config(config: SetupConfig) -> SetupSaveResult:
 
         logger.info(f"Setup-Konfiguration gespeichert in {env_path}")
 
+        # Symlink erstellen fuer docker-compose Variable-Interpolation
+        symlink_created = create_env_symlink(env_path)
+        if symlink_created:
+            logger.info("Symlink fuer docker-compose erstellt")
+        else:
+            logger.warning("Symlink konnte nicht erstellt werden - Container-Neustart erforderlich")
+
         # Terraform tfvars generieren
         try:
             await generate_terraform_tfvars(config)
@@ -646,6 +818,21 @@ async def save_setup(config: SetupConfig, force: bool = False):
             logger.error(f"Admin-User Fehler: {admin_result.get('message')}")
             result.restart_required = True
             result.message = "Konfiguration gespeichert, aber Admin-Erstellung fehlgeschlagen. Bitte Container neu starten."
+
+        # NetBox-Superuser synchronisieren
+        # (NetBox wurde moeglicherweise mit Default-Credentials gestartet)
+        try:
+            netbox_result = await sync_netbox_superuser(
+                username=config.netbox_admin_user,
+                password=config.netbox_admin_password,
+                email=config.netbox_admin_email,
+            )
+            if netbox_result["success"]:
+                logger.info(f"NetBox-Superuser: {netbox_result['action']} - {netbox_result['message']}")
+            else:
+                logger.warning(f"NetBox-Superuser Sync fehlgeschlagen: {netbox_result['message']}")
+        except Exception as e:
+            logger.warning(f"NetBox-Superuser Sync Fehler: {e}")
 
         # Cloud-Init Settings in DB speichern
         try:
