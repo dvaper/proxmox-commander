@@ -442,10 +442,15 @@ async def test_proxmox_connection(
     try:
         # Host normalisieren
         host = request.host.strip()
-        if not host.startswith("http"):
-            host = f"https://{host}"
-        if ":8006" not in host and "://" in host and host.count(":") == 1:
-            host = f"{host}:8006"
+        original_had_scheme = host.startswith("http")
+
+        if not original_had_scheme:
+            # Kein Schema angegeben -> direkter Zugriff, Port 8006 hinzufuegen
+            if ":" not in host:  # Kein Port angegeben
+                host = f"https://{host}:8006"
+            else:
+                host = f"https://{host}"
+        # Wenn Schema angegeben (https://...) -> Reverse Proxy, keinen Port hinzufuegen
 
         # Token-Name extrahieren
         if "!" in request.token_id:
