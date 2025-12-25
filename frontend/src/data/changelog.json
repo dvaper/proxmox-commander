@@ -1,5 +1,57 @@
 [
   {
+    "version": "v0.3.5",
+    "date": "2025-12-25",
+    "changes": {
+      "Bugfixes": [
+        "NETBOX_TOKEN wird jetzt korrekt aus env_file geladen",
+        "env_file Pfad auf ./data/config/.env korrigiert"
+      ]
+    }
+  },
+  {
+    "version": "v0.3.4",
+    "date": "2025-12-25",
+    "changes": {
+      "Bugfixes": [
+        ".env wird jetzt in /data/config/ gespeichert (verhindert Docker-Verzeichnis-Bug)",
+        "Setup-Wizard Redirect nach Speichern funktioniert wieder"
+      ]
+    }
+  },
+  {
+    "version": "v0.3.2",
+    "date": "2025-12-25",
+    "changes": {
+      "Infrastruktur": [
+        "Version-Tags im GitHub Actions Workflow korrigiert (v0.3.x statt 0.3.x)"
+      ]
+    }
+  },
+  {
+    "version": "v0.3.1",
+    "date": "2025-12-25",
+    "changes": {
+      "Dokumentation": [
+        "README auf GitHub URLs aktualisiert",
+        "Quick Start Anleitung hinzugefuegt"
+      ]
+    }
+  },
+  {
+    "version": "v0.3.0",
+    "date": "2025-12-25",
+    "changes": {
+      "Infrastruktur": [
+        "Oeffentliche Distribution auf GitHub (github.com/dvaper/proxmox-commander)",
+        "Docker Images auf ghcr.io (oeffentlich)",
+        "GitHub Actions fuer automatischen Build bei Tags",
+        "NetBox: Offizielles Community Image (netboxcommunity/netbox:v4.0)",
+        "PostgreSQL und Redis: Offizielle Docker Hub Images"
+      ]
+    }
+  },
+  {
     "version": "v0.2.36",
     "date": "2025-12-24",
     "changes": {
