@@ -110,29 +110,29 @@ const logoClass = computed(() => {
   height: 80px;
 }
 
-/* Banner Variante - kompaktes Layout (600x120 SVG) */
+/* Banner Variante - kompaktes Layout (480x100 SVG) */
 .app-logo--banner.app-logo--xs {
-  width: 300px;
+  width: 240px;
   height: auto;
 }
 
 .app-logo--banner.app-logo--sm {
-  width: 400px;
+  width: 320px;
   height: auto;
 }
 
 .app-logo--banner.app-logo--md {
-  width: 500px;
+  width: 400px;
   height: auto;
 }
 
 .app-logo--banner.app-logo--lg {
-  width: 550px;
+  width: 440px;
   height: auto;
 }
 
 .app-logo--banner.app-logo--xl {
-  width: 600px;
+  width: 480px;
   height: auto;
 }
 </style>
