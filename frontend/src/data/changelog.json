@@ -1,5 +1,14 @@
 [
   {
+    "version": "v0.3.31",
+    "date": "2025-12-26",
+    "changes": {
+      "Wartung": [
+        "Version aktualisiert"
+      ]
+    }
+  },
+  {
     "version": "v0.3.30",
     "date": "2025-12-26",
     "changes": {
