@@ -1,5 +1,14 @@
 [
   {
+    "version": "v0.3.36",
+    "date": "2025-12-26",
+    "changes": {
+      "Bugfixes": [
+        "Komponenten-Spalte kompakter mit Tooltip"
+      ]
+    }
+  },
+  {
     "version": "v0.3.35",
     "date": "2025-12-26",
     "changes": {
