@@ -241,7 +241,7 @@
         content: |
           # Fastfetch beim Login ausführen
           if command -v fastfetch &> /dev/null; then
-            fastfetch
+            fastfetch --logo pve
           fi
         mode: '0644'
 
