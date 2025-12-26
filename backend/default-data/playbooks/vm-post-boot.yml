@@ -13,7 +13,7 @@
 #   - Fastfetch
 ---
 - name: VM Post-Boot Konfiguration
-  hosts: linux
+  hosts: all
   become: true
   vars:
     # Ansible User
