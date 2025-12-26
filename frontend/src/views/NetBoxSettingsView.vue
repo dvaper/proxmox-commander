@@ -131,11 +131,18 @@
               NetBox laeuft als Teil von Proxmox Commander und ist intern unter
               <code>http://netbox:8080</code> erreichbar.
             </v-alert>
-            <v-alert type="info" variant="tonal">
+            <v-alert type="info" variant="tonal" class="mb-3">
               <strong>Externe URL:</strong>
               Die externe URL wird verwendet, um Links zur NetBox-Oberflaeche anzuzeigen.
               Diese sollte die URL sein, unter der NetBox von aussen erreichbar ist
               (z.B. ueber den konfigurierten Port oder einen Reverse Proxy).
+            </v-alert>
+            <v-alert type="info" variant="tonal">
+              <strong>Externe NetBox-Instanz:</strong>
+              Um eine bestehende NetBox-Installation zu verwenden, setze folgende
+              Umgebungsvariablen in <code>docker-compose.yml</code>:
+              <pre class="mt-2 text-caption">NETBOX_URL=http://deine-netbox:8080
+NETBOX_TOKEN=dein-api-token</pre>
             </v-alert>
           </v-card-text>
         </v-card>
