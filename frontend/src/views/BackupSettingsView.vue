@@ -331,7 +331,7 @@
               :items-per-page="10"
             >
               <template v-slot:item.created_at="{ item }">
-                {{ formatDate(item.created_at) }}
+                <span class="text-no-wrap">{{ formatDate(item.created_at) }}</span>
               </template>
               <template v-slot:item.size_bytes="{ item }">
                 {{ formatSize(item.size_bytes) }}
@@ -362,35 +362,37 @@
                 </v-icon>
               </template>
               <template v-slot:item.actions="{ item }">
-                <v-btn
-                  icon
-                  variant="text"
-                  size="small"
-                  @click="downloadBackup(item)"
-                >
-                  <v-icon>mdi-download</v-icon>
-                  <v-tooltip activator="parent" location="top">Herunterladen</v-tooltip>
-                </v-btn>
-                <v-btn
-                  icon
-                  variant="text"
-                  size="small"
-                  color="warning"
-                  @click="restoreFromBackup(item)"
-                >
-                  <v-icon>mdi-restore</v-icon>
-                  <v-tooltip activator="parent" location="top">Wiederherstellen</v-tooltip>
-                </v-btn>
-                <v-btn
-                  icon
-                  variant="text"
-                  size="small"
-                  color="error"
-                  @click="confirmDeleteBackup(item)"
-                >
-                  <v-icon>mdi-delete</v-icon>
-                  <v-tooltip activator="parent" location="top">Loeschen</v-tooltip>
-                </v-btn>
+                <div class="text-no-wrap">
+                  <v-btn
+                    icon
+                    variant="text"
+                    size="small"
+                    @click="downloadBackup(item)"
+                  >
+                    <v-icon>mdi-download</v-icon>
+                    <v-tooltip activator="parent" location="top">Herunterladen</v-tooltip>
+                  </v-btn>
+                  <v-btn
+                    icon
+                    variant="text"
+                    size="small"
+                    color="warning"
+                    @click="restoreFromBackup(item)"
+                  >
+                    <v-icon>mdi-restore</v-icon>
+                    <v-tooltip activator="parent" location="top">Wiederherstellen</v-tooltip>
+                  </v-btn>
+                  <v-btn
+                    icon
+                    variant="text"
+                    size="small"
+                    color="error"
+                    @click="confirmDeleteBackup(item)"
+                  >
+                    <v-icon>mdi-delete</v-icon>
+                    <v-tooltip activator="parent" location="top">Loeschen</v-tooltip>
+                  </v-btn>
+                </div>
               </template>
             </v-data-table>
           </v-card-text>
@@ -525,11 +527,11 @@ const backupOptions = ref({
 const backups = ref([])
 const loadingBackups = ref(false)
 const backupHeaders = [
-  { title: 'Datum', key: 'created_at', width: 130 },
+  { title: 'Datum', key: 'created_at', width: 145 },
   { title: 'Groesse', key: 'size_bytes', width: 80 },
   { title: 'Komponenten', key: 'components' },
   { title: 'Typ', key: 'is_scheduled', width: 50 },
-  { title: 'Aktionen', key: 'actions', width: 120, sortable: false },
+  { title: 'Aktionen', key: 'actions', width: 130, sortable: false },
 ]
 
 // Zeitplan
