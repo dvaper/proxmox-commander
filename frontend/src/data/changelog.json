@@ -1,5 +1,14 @@
 [
   {
+    "version": "v0.3.28",
+    "date": "2025-12-26",
+    "changes": {
+      "Features": [
+        "Post-Boot Playbook für VMs aus debian-13-proxmox Template"
+      ]
+    }
+  },
+  {
     "version": "v0.3.27",
     "date": "2025-12-26",
     "changes": {
