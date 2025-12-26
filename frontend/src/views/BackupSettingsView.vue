@@ -647,7 +647,9 @@ async function saveSchedule() {
       ...schedule.value,
       options: backupOptions.value,
     }
-    await api.put('/api/backup/schedule', scheduleData)
+    const response = await api.put('/api/backup/schedule', scheduleData)
+    // Aktualisierte Daten (inkl. next_run) uebernehmen
+    schedule.value = response.data
     showSnackbar('Zeitplan gespeichert')
   } catch (e) {
     showSnackbar('Fehler beim Speichern des Zeitplans', 'error')

@@ -815,6 +815,7 @@ class BackupService:
             history = BackupHistory(
                 id=backup_id,
                 filename=filename,
+                created_at=datetime.now(),  # Explizit Lokalzeit setzen
                 size_bytes=size_bytes,
                 components=json.dumps(components),
                 is_scheduled=is_scheduled,
