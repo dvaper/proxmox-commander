@@ -1,5 +1,18 @@
 [
   {
+    "version": "v0.3.30",
+    "date": "2025-12-26",
+    "changes": {
+      "Features": [
+        "Zusaetzliche Playbooks fuer VM-Konfiguration",
+        "Fastfetch mit Proxmox VE Logo"
+      ],
+      "Bugfixes": [
+        "Vm-post-boot Playbook hosts: all statt linux"
+      ]
+    }
+  },
+  {
     "version": "v0.3.29",
     "date": "2025-12-26",
     "changes": {
