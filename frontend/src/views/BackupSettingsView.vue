@@ -359,6 +359,9 @@
                   size="small"
                 >
                   {{ item.is_scheduled ? 'mdi-calendar-check' : 'mdi-hand-back-right' }}
+                  <v-tooltip activator="parent" location="top">
+                    {{ item.is_scheduled ? 'Geplantes Backup' : 'Manuelles Backup' }}
+                  </v-tooltip>
                 </v-icon>
               </template>
               <template v-slot:item.actions="{ item }">
