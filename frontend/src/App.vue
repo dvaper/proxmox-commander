@@ -292,7 +292,7 @@
         </v-card-title>
         <v-card-text>
           <div v-for="release in changelog" :key="release.version" class="mb-4">
-            <div class="text-h6 mb-2">{{ release.version }} <span class="text-caption text-grey">({{ release.date }})</span></div>
+            <div class="text-h6 mb-2">{{ release.version }} <span v-if="release.title" class="text-primary ml-2">{{ release.title }}</span> <span class="text-caption text-grey">({{ release.date }})</span></div>
             <div v-for="(items, category) in release.changes" :key="category" class="mb-2">
               <div class="font-weight-medium text-primary">{{ category }}</div>
               <ul class="pl-4">

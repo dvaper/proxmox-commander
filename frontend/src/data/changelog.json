@@ -11,296 +11,58 @@
   {
     "version": "v0.3.42",
     "date": "2025-12-26",
-    "changes": {
-      "Dokumentation": [
-        "README mit Sprachumschalter (DE/EN)"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.41",
-    "date": "2025-12-26",
-    "changes": {
-      "Bugfixes": [
-        "Auto-Refresh Backup-Liste alle 30s wenn Zeitplan aktiv"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.40",
-    "date": "2025-12-26",
-    "changes": {
-      "Bugfixes": [
-        "Backup-Liste nach Zeitplan-Speichern automatisch aktualisieren"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.39",
-    "date": "2025-12-26",
-    "changes": {
-      "Bugfixes": [
-        "Zeitplan next_run und Backup-Zeiten korrigiert"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.38",
-    "date": "2025-12-26",
-    "changes": {
-      "Bugfixes": [
-        "Zeitplan next_run wird nach Speichern korrekt aktualisiert"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.37",
-    "date": "2025-12-26",
-    "changes": {
-      "Bugfixes": [
-        "Tooltip fuer Typ-Icons in Backup-Liste"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.36",
-    "date": "2025-12-26",
-    "changes": {
-      "Bugfixes": [
-        "Komponenten-Spalte kompakter mit Tooltip"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.35",
-    "date": "2025-12-26",
-    "changes": {
-      "Bugfixes": [
-        "Action-Buttons und Datum in Backup-Liste nowrap"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.33",
-    "date": "2025-12-26",
+    "title": "Backup & Restore",
     "changes": {
       "Features": [
-        "Backup & Restore Feature implementiert"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.32",
-    "date": "2025-12-26",
-    "changes": {
-      "Bugfixes": [
-        "Setup-zsh.yml Docker-Alias Jinja2-Escaping",
-        "Locale.yml verwendet localectl fuer systemd-Systeme"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.31",
-    "date": "2025-12-26",
-    "changes": {
-      "Wartung": [
-        "Version aktualisiert"
+        "Backup & Restore Feature fuer VMs und Container",
+        "Zeitplan-basierte automatische Backups",
+        "Restore-Funktionalitaet mit Fortschrittsanzeige"
+      ],
+      "Verbesserungen": [
+        "Auto-Refresh der Backup-Liste alle 30s bei aktivem Zeitplan",
+        "Tooltips fuer Typ-Icons und Komponenten-Spalte",
+        "README mit Sprachumschalter (DE/EN)"
       ]
     }
   },
   {
     "version": "v0.3.30",
     "date": "2025-12-26",
+    "title": "VM Post-Boot Automation",
     "changes": {
       "Features": [
-        "Zusaetzliche Playbooks fuer VM-Konfiguration",
+        "Post-Boot Playbook fuer VMs aus debian-13-proxmox Template",
+        "Automatische Playbook-Synchronisation beim Container-Start",
         "Fastfetch mit Proxmox VE Logo"
-      ],
-      "Bugfixes": [
-        "Vm-post-boot Playbook hosts: all statt linux"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.29",
-    "date": "2025-12-26",
-    "changes": {
-      "Bugfixes": [
-        "Neue Playbooks bei Container-Start automatisch synchronisieren"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.28",
-    "date": "2025-12-26",
-    "changes": {
-      "Features": [
-        "Post-Boot Playbook für VMs aus debian-13-proxmox Template"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.27",
-    "date": "2025-12-26",
-    "changes": {
-      "Bugfixes": [
-        "Proxmox-Verbindungstest mit maskiertem Secret"
       ]
     }
   },
   {
     "version": "v0.3.26",
     "date": "2025-12-26",
+    "title": "Einstellungen & Konfiguration",
     "changes": {
       "Features": [
-        "Einstellungen-Menü reorganisiert"
+        "Einstellungen-Menue reorganisiert",
+        "Proxmox-Verbindungstest mit maskiertem Secret"
       ],
       "Bugfixes": [
-        "Docker-Socket für NetBox-Benutzerverwaltung hinzugefügt"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.25",
-    "date": "2025-12-25",
-    "changes": {
-      "Wartung": [
-        "Version aktualisiert"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.24",
-    "date": "2025-12-25",
-    "changes": {
-      "Wartung": [
-        "Version aktualisiert"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.23",
-    "date": "2025-12-25",
-    "changes": {
-      "Bugfixes": [
-        "Proxmox-Verbindungstest für Reverse Proxy korrigiert",
-        "Docker CLI im API-Container für NetBox-Benutzerverwaltung"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.5",
-    "date": "2025-12-25",
-    "changes": {
-      "Bugfixes": [
-        "NETBOX_TOKEN wird jetzt korrekt aus env_file geladen",
-        "env_file Pfad korrigiert"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.4",
-    "date": "2025-12-25",
-    "changes": {
-      "Bugfixes": [
-        ".env wird jetzt in /data/config/ gespeichert (verhindert Docker-Verzeichnis-Bug)",
-        "Setup-Wizard Redirect nach Speichern funktioniert wieder"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.36",
-    "date": "2025-12-24",
-    "changes": {
-      "UI": [
-        "Logo-Banner: Groessere Darstellung fuer bessere Lesbarkeit",
-        "Login: Redundante 'Anmelden'-Ueberschrift entfernt"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.34",
-    "date": "2025-12-24",
-    "changes": {
-      "Features": [
-        "Sidebar: Waehlbare Logo-Variante (Icon oder Banner)",
-        "Profil: Einstellung fuer Sidebar-Logo unter 'Mein Profil'"
+        "Docker-Socket fuer NetBox-Benutzerverwaltung",
+        "Setup-zsh.yml Docker-Alias Jinja2-Escaping"
       ]
     }
   },
   {
     "version": "v0.2.32",
     "date": "2025-12-24",
+    "title": "Benachrichtigungssystem",
     "changes": {
       "Features": [
-        "SMTP: Test-Mail an angemeldeten Benutzer senden",
-        "SMTP: HTML-formatierte Test-E-Mail mit Serverdaten",
-        "Gotify: Test-Nachricht senden Button"
-      ],
-      "Bugfixes": [
-        "Gotify: Bessere Fehlermeldung wenn Token nicht gespeichert",
-        "Gotify: Verbindungstest nutzt jetzt /message statt /application (App-Token kompatibel)"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.31",
-    "date": "2025-12-24",
-    "changes": {
-      "Bugfixes": [
-        "Notifications: API-Client mit JWT-Token (401 Fehler behoben)",
-        "Setup-Wizard: Veraltete Restart-Meldung entfernt"
-      ],
-      "UI": [
-        "Logo: Theme-abhaengige Icon-Varianten (Hell/Dunkel)",
-        "Logo: Neuer withBackground Prop fuer Hexagon-Hintergrund"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.27",
-    "date": "2025-12-24",
-    "changes": {
-      "UI": [
-        "AppLogo-Komponente: Icon- und Banner-Variante mit Theme-Erkennung",
-        "Login/Reset-Seiten: Vollstaendiges Logo-Banner mit App-Name und Tagline",
-        "Sidebar: Kompaktes Icon-Logo im Header",
-        "Dark/Light Mode: Automatische Anpassung der Banner-Textfarben"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.26",
-    "date": "2025-12-24",
-    "changes": {
-      "UI": [
-        "Logo im Sidebar-Header und auf der Login-Seite",
-        "Hexagon-Logo mit Server-Rack und Netzwerk-Symbolen"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.25",
-    "date": "2025-12-24",
-    "changes": {
-      "Features": [
-        "Event-Integration: Automatische Benachrichtigungen bei VM-Deployment",
-        "Event-Integration: Automatische Benachrichtigungen bei VM-Loeschung",
-        "Event-Integration: Automatische Benachrichtigungen bei Ansible-Ausfuehrung (Erfolg/Fehler)",
-        "Webhooks erhalten detaillierte Payloads mit VM/Playbook-Informationen"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.24",
-    "date": "2025-12-24",
-    "changes": {
-      "Features": [
-        "Benachrichtigungs-System: E-Mail (SMTP), Gotify und Webhooks",
-        "Passwort-Reset: Link per E-Mail anfordern und zuruecksetzen",
-        "Admin-UI: Benachrichtigungseinstellungen unter Verwaltung",
-        "Benutzer-Praeferenzen: Ereignis-Benachrichtigungen im Profil konfigurieren",
-        "Webhooks: HMAC-Signatur, Event-Filter, Status-Tracking"
+        "E-Mail-Benachrichtigungen via SMTP mit Test-Mail-Funktion",
+        "Gotify Push-Benachrichtigungen mit Test-Nachricht",
+        "Webhook-Integration mit HMAC-Signatur und Event-Filter",
+        "Passwort-Reset per E-Mail anfordern und zuruecksetzen",
+        "Event-Integration bei VM-Deployment/Loeschung und Ansible-Ausfuehrung"
       ],
       "Sicherheit": [
         "Verschluesselte Speicherung von SMTP-Passwoertern und API-Tokens",
@@ -309,204 +71,67 @@
     }
   },
   {
-    "version": "v0.2.23",
+    "version": "v0.2.27",
     "date": "2025-12-24",
-    "changes": {
-      "Bugfixes": [
-        "NetBox: VLAN-Import zeigt automatisch gescannte VLANs beim Laden",
-        "NetBox: Tab-Wechsel nur wenn keine neuen VLANs vorhanden"
-      ],
-      "Dokumentation": [
-        "README: Docker-Versionen aktualisiert (24.x+ / 27.x+)",
-        "README: Proxmox VE 9.x Unterstuetzung dokumentiert"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.22",
-    "date": "2025-12-24",
+    "title": "Theme & UI System",
     "changes": {
       "Features": [
-        "Erscheinungsbild: Wahl zwischen System/Hell/Dunkel",
-        "Light-Themes: Alle 5 Farbschemas auch als helle Variante",
-        "System-Modus: Folgt automatisch der Betriebssystem-Einstellung"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.21",
-    "date": "2025-12-24",
-    "changes": {
-      "Bugfixes": [
-        "Migration: Fehlende theme-Spalte wird automatisch hinzugefuegt",
-        "Setup: Ungueltige .env-Zeilen (ohne =) werden ignoriert statt kopiert"
+        "5 Farbthemes: Blau (Standard), Orange, Gruen, Lila, Teal",
+        "Light/Dark Mode mit System-Erkennung",
+        "Theme wird im Benutzerprofil gespeichert"
+      ],
+      "UI": [
+        "AppLogo-Komponente: Icon- und Banner-Variante",
+        "Dashboard Re-Design mit 2-spaltigem Layout",
+        "Proxmox Cluster-Nodes mit Live-Status"
       ]
     }
   },
   {
     "version": "v0.2.20",
     "date": "2025-12-24",
+    "title": "Auto-Sync",
     "changes": {
       "Features": [
-        "Auto-Sync: Automatische Inventory-Synchronisation mit Proxmox",
-        "Auto-Sync: Konfigurierbares Sync-Intervall (1-60 Minuten)",
-        "Auto-Sync: Start/Stop-Steuerung ueber UI",
-        "Auto-Sync: Status-Anzeige mit letztem Sync-Zeitpunkt"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.19",
-    "date": "2025-12-24",
-    "changes": {
-      "Features": [
-        "Theme-Auswahl: 5 Farbthemes zur Unterscheidung von anderen Apps",
-        "Theme-Auswahl: Blau (Standard), Orange, Gruen, Lila, Teal",
-        "Theme-Auswahl: Theme wird im Benutzerprofil gespeichert",
-        "Theme-Auswahl: Sofortige Vorschau beim Klick"
+        "Automatische Inventory-Synchronisation mit Proxmox",
+        "Konfigurierbares Sync-Intervall (1-60 Minuten)",
+        "Start/Stop-Steuerung ueber UI",
+        "Status-Anzeige mit letztem Sync-Zeitpunkt"
       ]
     }
   },
   {
     "version": "v0.2.18",
     "date": "2025-12-24",
+    "title": "NetBox Integration",
     "changes": {
       "Features": [
-        "NetBox: VM-Objekt wird beim Deployment automatisch erstellt",
-        "NetBox: IP-Adresse wird mit VM verknuepft (primary_ip4)",
-        "NetBox: Cluster 'Proxmox' wird automatisch angelegt",
-        "NetBox: VM-Objekt wird bei VM-Loeschung mitgeloescht"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.17",
-    "date": "2025-12-24",
-    "changes": {
+        "NetBox-Integration in Sidebar mit VLAN-Verwaltung",
+        "VLAN-Import von Proxmox nach NetBox",
+        "Workflow-Tabs: VLAN-Import, Netzwerke, IP-Adressen",
+        "IP-Sync: Proxmox VMs scannen und IPs nach NetBox synchronisieren",
+        "VM-Objekt wird beim Deployment automatisch erstellt"
+      ],
       "Infrastruktur": [
-        "Terraform: Wechsel von Telmate/proxmox auf bpg/proxmox Provider",
-        "Terraform: Kompatibilitaet mit Proxmox VE 8.x und 9.x",
-        "Terraform: Modul-Konfiguration nach funktionierender Referenz aktualisiert"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.16",
-    "date": "2025-12-24",
-    "changes": {
-      "Bugfixes": [
-        "NetBox: VLAN-Import Button nur sichtbar wenn neue VLANs vorhanden",
-        "NetBox: Prefix-Feld nur bei neuen VLANs editierbar",
-        "NetBox: Netzwerke Empty-State nur wenn VLANs UND Prefixes leer",
-        "NetBox: Checkbox bei bereits existierenden VLANs deaktiviert"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.15",
-    "date": "2025-12-24",
-    "changes": {
-      "Features": [
-        "NetBox: Komplett ueberarbeitete UI mit Workflow-Tabs (1. VLAN-Import, 2. Netzwerke, 3. IP-Adressen)",
-        "NetBox: Intuitive Schritt-fuer-Schritt Benutzerfuehrung durch den Import-Prozess",
-        "NetBox: 'Mit Proxmox abgleichen' umbenannt zu 'IPs synchronisieren' fuer Klarheit",
-        "NetBox: Empty-States mit hilfreichen Hinweisen und Navigation zwischen Tabs"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.14",
-    "date": "2025-12-23",
-    "changes": {
-      "Bugfixes": [
-        "Setup: Sonderzeichen in Passwoertern (#, $, ', \", etc.) werden korrekt in .env gespeichert"
+        "Terraform: Wechsel auf bpg/proxmox Provider",
+        "Kompatibilitaet mit Proxmox VE 8.x und 9.x"
       ]
     }
   },
   {
     "version": "v0.2.13",
     "date": "2025-12-23",
+    "title": "Setup & Konfiguration",
     "changes": {
       "Features": [
-        "Neuer Endpoint: terraform.tfvars ohne Wizard regenerieren",
-        "Dashboard: Button 'Terraform tfvars regenerieren' im Schnellzugriff",
-        "Setup-Wizard kann jederzeit erneut ausgefuehrt werden (force=true)"
-      ],
-      "Bugfixes": [
-        "setup.py: Fehlender settings-Import in generate_terraform_tfvars",
-        "setup.py: save_env_config als async korrigiert",
-        "Setup: Admin-User wird nach Hot-Reload erstellt (Login nach Wizard)",
-        "Setup: Robustere Admin-Erstellung mit expliziten Credentials",
-        "NetBox: Default-Token verwenden (403 Forbidden Fix)"
+        "terraform.tfvars ohne Wizard regenerieren",
+        "Dashboard: Button 'Terraform tfvars regenerieren'",
+        "Setup-Wizard kann jederzeit erneut ausgefuehrt werden",
+        "NetBox Status-Anzeige im UI"
       ],
       "Infrastruktur": [
-        "Alle Volumes als Bind Mounts unter ./data/ (kein docker compose down -v mehr noetig)"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.12",
-    "date": "2025-12-23",
-    "changes": {
-      "Bugfixes": [
-        "Terraform Module fehlen - proxmox-vm Modul hinzugefuegt",
-        "terraform.tfvars wird automatisch durch Setup-Wizard generiert"
-      ],
-      "Features": [
-        "Terraform-Dateien werden beim Container-Start automatisch installiert"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.11",
-    "date": "2025-12-23",
-    "changes": {
-      "Features": [
-        "Dashboard Re-Design mit 2-spaltigem Layout",
-        "Proxmox Cluster-Nodes in Externe Dienste mit Live-Status",
-        "Schnellzugriff: Playbook erstellen, Mit Proxmox abgleichen"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.10",
-    "date": "2025-12-23",
-    "changes": {
-      "Features": [
-        "IP-Sync: Proxmox VMs scannen und IPs nach NetBox synchronisieren",
-        "Button 'Mit Proxmox abgleichen' im Prefixes-Tab",
-        "IP-Erkennung via QEMU Guest Agent und Cloud-Init Config"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.9",
-    "date": "2025-12-23",
-    "changes": {
-      "Features": [
-        "NetBox-Integration in Sidebar mit VLAN-Verwaltung",
-        "Proxmox VLAN-Scan (Bridges und VLAN-Tags)",
-        "VLAN-Import von Proxmox nach NetBox",
-        "Prefix-Auslastungsanzeige fuer IP-Prefixes"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.8",
-    "date": "2025-12-23",
-    "changes": {
-      "Bugfixes": [
-        "NetBox URL im VMDeploymentWizard korrigiert"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.7",
-    "date": "2025-12-23",
-    "changes": {
-      "Features": [
-        "Automatische Versionierung aus Git-Tags",
-        "Automatische Changelog-Generierung aus Commits"
+        "Alle Volumes als Bind Mounts unter ./data/",
+        "Terraform-Dateien werden automatisch installiert"
       ],
       "Sicherheit": [
         "Setup-Wizard generiert NETBOX_SECRET_KEY mit 50+ Zeichen"
@@ -514,77 +139,33 @@
     }
   },
   {
-    "version": "v0.2.6",
-    "date": "2025-12-23",
-    "changes": {
-      "Sicherheit": [
-        "Setup-Wizard aktualisiert bestehende Admin-Credentials beim Neustart"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.5",
-    "date": "2025-12-23",
-    "changes": {
-      "UX": [
-        "Service Status-Badge zeigt 'Services: Online/Starting/Error'",
-        "Setup-Wizard: App-Admin Panel standardmaessig geoeffnet",
-        "Setup-Wizard: Pflichtfeld-Kennzeichnung fuer Admin-Passwort"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.4",
-    "date": "2025-12-23",
-    "changes": {
-      "Features": [
-        "NetBox Status-Anzeige im UI (Starting/Ready/Error)"
-      ]
-    }
-  },
-  {
-    "version": "v0.2.3",
-    "date": "2025-12-22",
-    "changes": {
-      "Sicherheit": [
-        "NetBox SECRET_KEY Validierung (min. 50 Zeichen)"
-      ]
-    }
-  },
-  {
     "version": "v0.1.0",
     "date": "2025-12-22",
+    "title": "Initiale Version",
     "changes": {
       "Infrastruktur": [
         "Standalone Docker Compose Setup",
         "Integrierter NetBox Container (IPAM/DCIM)",
         "PostgreSQL und Redis fuer NetBox",
-        "Konfiguration via .env Datei",
-        "Persistente Volumes fuer alle Daten"
+        "Konfiguration via .env Datei"
       ],
       "VM-Management": [
         "VM-Deployment via Proxmox und Terraform",
-        "NetBox IPAM Integration (automatische IP-Verwaltung)",
         "VM Power Control: Start, Stop, Shutdown, Reboot",
         "Snapshot Management: Erstellen, Loeschen, Rollback",
         "VM Cloning: Full Clone und Linked Clone",
-        "VM Migration zwischen Proxmox-Nodes",
-        "VM-Vorlagen/Presets fuer wiederkehrende Konfigurationen",
-        "Multi-VLAN Support",
-        "Frontend-URL pro VM fuer direkten Zugriff"
+        "VM Migration zwischen Proxmox-Nodes"
       ],
       "Ansible Integration": [
         "Playbook Execution mit Live-Output via WebSocket",
         "Inventory Browser und Editor",
-        "Playbook Editor mit YAML-Syntax-Highlighting",
-        "Playbook-Vorlagen fuer schnellen Start"
+        "Playbook Editor mit YAML-Syntax-Highlighting"
       ],
       "Cloud-Init": [
         "13 spezialisierte Profile (Docker, K8s, Web, DB, etc.)",
-        "Phone-Home Callback nach VM-Boot",
         "SSH-Hardening und Security Best Practices"
       ],
-      "Benutzer-Verwaltung": [
+      "Benutzerverwaltung": [
         "Rollen-basierte Zugriffskontrolle",
         "JWT-Authentifizierung"
       ]
