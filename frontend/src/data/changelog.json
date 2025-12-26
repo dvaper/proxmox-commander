@@ -1,5 +1,17 @@
 [
   {
+    "version": "v0.3.26",
+    "date": "2025-12-26",
+    "changes": {
+      "Features": [
+        "Einstellungen-Menü reorganisiert"
+      ],
+      "Bugfixes": [
+        "Docker-Socket für NetBox-Benutzerverwaltung hinzugefügt"
+      ]
+    }
+  },
+  {
     "version": "v0.3.25",
     "date": "2025-12-25",
     "changes": {
