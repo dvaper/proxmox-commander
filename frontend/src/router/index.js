@@ -141,6 +141,12 @@ const routes = [
     meta: { requiresAuth: true, requiresSuperAdmin: true },
   },
   {
+    path: '/settings/netbox',
+    name: 'NetBoxSettings',
+    component: () => import('@/views/NetBoxSettingsView.vue'),
+    meta: { requiresAuth: true, requiresSuperAdmin: true },
+  },
+  {
     path: '/settings/netbox-users',
     name: 'NetBoxUsers',
     component: () => import('@/views/NetBoxUsersView.vue'),

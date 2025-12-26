@@ -100,41 +100,64 @@
         <template v-if="authStore.isSuperAdmin">
           <v-list-subheader class="mt-2">EINSTELLUNGEN</v-list-subheader>
 
-          <!-- Benutzer (Untermenü) -->
-          <v-list-group value="users">
+          <!-- Proxmox (Untermenü) -->
+          <v-list-group value="proxmox">
             <template v-slot:activator="{ props }">
               <v-list-item
                 v-bind="props"
-                prepend-icon="mdi-account-group"
-                title="Benutzer"
+                prepend-icon="mdi-server"
+                title="Proxmox"
               ></v-list-item>
             </template>
             <v-list-item
-              to="/users"
-              prepend-icon="mdi-account-multiple"
-              title="App-Benutzer"
-              subtitle="Proxmox Commander"
+              to="/settings/proxmox"
+              prepend-icon="mdi-connection"
+              title="Verbindung"
             ></v-list-item>
             <v-list-item
-              to="/settings/netbox-users"
-              prepend-icon="mdi-account-network"
-              title="NetBox-Benutzer"
-              subtitle="IPAM/DCIM Zugang"
+              to="/users"
+              prepend-icon="mdi-account-multiple"
+              title="Benutzer"
             ></v-list-item>
           </v-list-group>
 
-          <v-list-item
-            to="/settings/proxmox"
-            prepend-icon="mdi-server"
-            title="Proxmox"
-            subtitle="API-Verbindung"
-          ></v-list-item>
-          <v-list-item
-            to="/settings/notifications"
-            prepend-icon="mdi-bell-cog"
-            title="Benachrichtigungen"
-            subtitle="E-Mail, Gotify, Webhooks"
-          ></v-list-item>
+          <!-- NetBox (Untermenü) -->
+          <v-list-group value="netbox">
+            <template v-slot:activator="{ props }">
+              <v-list-item
+                v-bind="props"
+                prepend-icon="mdi-ip-network"
+                title="NetBox"
+              ></v-list-item>
+            </template>
+            <v-list-item
+              to="/settings/netbox"
+              prepend-icon="mdi-connection"
+              title="Verbindung"
+            ></v-list-item>
+            <v-list-item
+              to="/settings/netbox-users"
+              prepend-icon="mdi-account-multiple"
+              title="Benutzer"
+            ></v-list-item>
+          </v-list-group>
+
+          <!-- Ansible (Untermenü) -->
+          <v-list-group value="ansible">
+            <template v-slot:activator="{ props }">
+              <v-list-item
+                v-bind="props"
+                prepend-icon="mdi-ansible"
+                title="Ansible"
+              ></v-list-item>
+            </template>
+            <v-list-item
+              to="/settings/ssh"
+              prepend-icon="mdi-key-chain"
+              title="SSH-Keys"
+            ></v-list-item>
+          </v-list-group>
+
           <v-list-item
             to="/settings/cloud-init"
             prepend-icon="mdi-cloud-upload"
@@ -142,10 +165,10 @@
             subtitle="SSH-Keys, Admin-User"
           ></v-list-item>
           <v-list-item
-            to="/settings/ssh"
-            prepend-icon="mdi-key-chain"
-            title="SSH"
-            subtitle="Ansible SSH-Keys"
+            to="/settings/notifications"
+            prepend-icon="mdi-bell-cog"
+            title="Benachrichtigungen"
+            subtitle="E-Mail, Gotify, Webhooks"
           ></v-list-item>
         </template>
       </v-list>
@@ -388,12 +411,13 @@ const pageTitles = {
   '/playbooks': 'Playbooks',
   '/inventory': 'Inventory',
   '/executions': 'Ausführungen',
-  '/users': 'App-Benutzer',
+  '/users': 'Benutzer',
+  '/settings/proxmox': 'Proxmox-Verbindung',
+  '/settings/netbox': 'NetBox-Verbindung',
   '/settings/netbox-users': 'NetBox-Benutzer',
-  '/settings/proxmox': 'Proxmox-Einstellungen',
-  '/settings/notifications': 'Benachrichtigungen',
+  '/settings/ssh': 'SSH-Keys',
   '/settings/cloud-init': 'Cloud-Init',
-  '/settings/ssh': 'SSH-Einstellungen',
+  '/settings/notifications': 'Benachrichtigungen',
 }
 
 // Setup-Route erkennen (keine Navigation anzeigen)
