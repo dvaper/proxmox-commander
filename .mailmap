@@ -1,0 +1,4 @@
+# Consolidate all commits to single author
+# Format: Canonical Name <canonical@email> Commit Name <commit@email>
+
+darth <info@newsxc.net> Frank <frank@newsxc.net>
