@@ -152,6 +152,12 @@ const routes = [
     component: () => import('@/views/NetBoxUsersView.vue'),
     meta: { requiresAuth: true, requiresSuperAdmin: true },
   },
+  {
+    path: '/settings/backup',
+    name: 'BackupSettings',
+    component: () => import('@/views/BackupSettingsView.vue'),
+    meta: { requiresAuth: true, requiresSuperAdmin: true },
+  },
 ]
 
 const router = createRouter({

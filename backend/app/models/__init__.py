@@ -20,6 +20,9 @@ from app.models.notification_log import NotificationLog
 # Cloud-Init Settings
 from app.models.cloud_init_settings import CloudInitSettings
 
+# Backup Models
+from app.models.backup import BackupHistory, BackupSchedule
+
 __all__ = [
     "User",
     "UserGroupAccess",
@@ -37,4 +40,7 @@ __all__ = [
     "NotificationLog",
     # Cloud-Init Settings
     "CloudInitSettings",
+    # Backup Models
+    "BackupHistory",
+    "BackupSchedule",
 ]

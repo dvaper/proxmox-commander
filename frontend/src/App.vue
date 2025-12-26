@@ -170,6 +170,12 @@
             title="Benachrichtigungen"
             subtitle="E-Mail, Gotify, Webhooks"
           ></v-list-item>
+          <v-list-item
+            to="/settings/backup"
+            prepend-icon="mdi-backup-restore"
+            title="Backup & Restore"
+            subtitle="Datensicherung"
+          ></v-list-item>
         </template>
       </v-list>
 
@@ -418,6 +424,7 @@ const pageTitles = {
   '/settings/ssh': 'SSH-Keys',
   '/settings/cloud-init': 'Cloud-Init',
   '/settings/notifications': 'Benachrichtigungen',
+  '/settings/backup': 'Backup & Restore',
 }
 
 // Setup-Route erkennen (keine Navigation anzeigen)

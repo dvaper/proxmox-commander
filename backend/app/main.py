@@ -15,7 +15,9 @@ from app.routers.websocket import router as websocket_router
 from app.routers.notifications import router as notifications_router
 from app.routers.password_reset import router as password_reset_router
 from app.routers.cloud_init_settings import router as cloud_init_settings_router
+from app.routers.backup import router as backup_router
 from app.services.inventory_sync_service import get_sync_service
+from app.services.backup_scheduler import start_backup_scheduler, stop_backup_scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +33,16 @@ async def lifespan(app: FastAPI):
     await sync_service.start_background_sync()
     logger.info("Background Inventory-Sync gestartet")
 
+    # Backup-Scheduler starten
+    await start_backup_scheduler()
+    logger.info("Backup-Scheduler gestartet")
+
     yield
 
     # Shutdown
+    await stop_backup_scheduler()
+    logger.info("Backup-Scheduler gestoppt")
+
     await sync_service.stop_background_sync()
     logger.info("Background Inventory-Sync gestoppt")
 
@@ -70,6 +79,7 @@ app.include_router(websocket_router)
 app.include_router(notifications_router)
 app.include_router(password_reset_router)
 app.include_router(cloud_init_settings_router)
+app.include_router(backup_router)
 
 
 @app.get("/")
