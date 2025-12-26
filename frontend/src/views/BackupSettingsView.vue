@@ -509,8 +509,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import api from '@/api/client'
+
+// Polling-Intervall fuer Backup-Liste (wenn Zeitplan aktiv)
+let backupPollingInterval = null
 
 // Backup-Optionen
 const backupOptions = ref({
@@ -595,7 +598,40 @@ onMounted(async () => {
     loadBackups(),
     loadSchedule(),
   ])
+  // Polling starten wenn Zeitplan aktiv
+  if (schedule.value.enabled) {
+    startBackupPolling()
+  }
 })
+
+onUnmounted(() => {
+  stopBackupPolling()
+})
+
+// Polling starten/stoppen wenn Zeitplan aktiviert/deaktiviert wird
+watch(() => schedule.value.enabled, (enabled) => {
+  if (enabled) {
+    startBackupPolling()
+  } else {
+    stopBackupPolling()
+  }
+})
+
+function startBackupPolling() {
+  if (backupPollingInterval) return
+  // Alle 30 Sekunden Backup-Liste aktualisieren
+  backupPollingInterval = setInterval(async () => {
+    await loadBackups()
+    await loadSchedule()  // Auch next_run aktualisieren
+  }, 30000)
+}
+
+function stopBackupPolling() {
+  if (backupPollingInterval) {
+    clearInterval(backupPollingInterval)
+    backupPollingInterval = null
+  }
+}
 
 async function loadBackups() {
   loadingBackups.value = true
