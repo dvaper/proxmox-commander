@@ -1,5 +1,15 @@
 [
   {
+    "version": "v0.3.32",
+    "date": "2025-12-26",
+    "changes": {
+      "Bugfixes": [
+        "Setup-zsh.yml Docker-Alias Jinja2-Escaping",
+        "Locale.yml verwendet localectl fuer systemd-Systeme"
+      ]
+    }
+  },
+  {
     "version": "v0.3.31",
     "date": "2025-12-26",
     "changes": {
