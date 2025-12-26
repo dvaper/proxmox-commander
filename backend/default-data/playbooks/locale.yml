@@ -42,7 +42,12 @@
       register: locale_gen_result
       changed_when: "'Generation complete' in locale_gen_result.stdout"
 
-    - name: "Locales | Standard-Locale setzen"
+    - name: "Locales | Standard-Locale setzen (localectl)"
+      ansible.builtin.command: localectl set-locale LANG={{ locale_lang }} LANGUAGE={{ locale_language }} LC_ALL={{ locale_lc_all }}
+      changed_when: true
+      when: ansible_service_mgr == 'systemd'
+
+    - name: "Locales | Standard-Locale setzen (/etc/default/locale)"
       ansible.builtin.copy:
         dest: /etc/default/locale
         content: |
@@ -53,10 +58,16 @@
         mode: '0644'
         owner: root
         group: root
+      when: ansible_service_mgr != 'systemd'
+
+    - name: "Locales | Aktuelle Einstellung pruefen"
+      ansible.builtin.command: localectl status
+      register: localectl_status
+      changed_when: false
 
     - name: "Locales | Status"
       ansible.builtin.debug:
         msg: |
           {{ inventory_hostname }}: Locale konfiguriert
-          LANG={{ locale_lang }}
+          {{ localectl_status.stdout }}
           Hinweis: Fuer vollstaendige Aktivierung ist ein Re-Login erforderlich
