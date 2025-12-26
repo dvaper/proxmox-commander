@@ -436,8 +436,20 @@ async def test_proxmox_connection(
     Proxmox-Verbindung testen (nur Super-Admin).
 
     Testet die Verbindung mit den angegebenen Credentials.
+    Wenn token_secret "********" ist, wird das gespeicherte Secret verwendet.
     """
     import httpx
+
+    # Wenn maskiertes Secret, gespeichertes verwenden
+    token_secret = request.token_secret
+    if token_secret == "********":
+        token_secret = app_settings.proxmox_token_secret
+        if not token_secret:
+            return ProxmoxTestResponse(
+                success=False,
+                message="Kein Token Secret gespeichert",
+                error="Bitte geben Sie das Token Secret ein"
+            )
 
     try:
         # Host normalisieren
@@ -465,7 +477,7 @@ async def test_proxmox_connection(
         # API-Aufruf
         url = f"{host}/api2/json/version"
         headers = {
-            "Authorization": f"PVEAPIToken={request.token_id}={request.token_secret}"
+            "Authorization": f"PVEAPIToken={request.token_id}={token_secret}"
         }
 
         async with httpx.AsyncClient(verify=request.verify_ssl, timeout=10.0) as client:
