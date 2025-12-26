@@ -362,35 +362,37 @@
                 </v-icon>
               </template>
               <template v-slot:item.actions="{ item }">
-                <v-btn
-                  icon
-                  variant="text"
-                  size="small"
-                  @click="downloadBackup(item)"
-                >
-                  <v-icon>mdi-download</v-icon>
-                  <v-tooltip activator="parent" location="top">Herunterladen</v-tooltip>
-                </v-btn>
-                <v-btn
-                  icon
-                  variant="text"
-                  size="small"
-                  color="warning"
-                  @click="restoreFromBackup(item)"
-                >
-                  <v-icon>mdi-restore</v-icon>
-                  <v-tooltip activator="parent" location="top">Wiederherstellen</v-tooltip>
-                </v-btn>
-                <v-btn
-                  icon
-                  variant="text"
-                  size="small"
-                  color="error"
-                  @click="confirmDeleteBackup(item)"
-                >
-                  <v-icon>mdi-delete</v-icon>
-                  <v-tooltip activator="parent" location="top">Loeschen</v-tooltip>
-                </v-btn>
+                <div class="text-no-wrap">
+                  <v-btn
+                    icon
+                    variant="text"
+                    size="small"
+                    @click="downloadBackup(item)"
+                  >
+                    <v-icon>mdi-download</v-icon>
+                    <v-tooltip activator="parent" location="top">Herunterladen</v-tooltip>
+                  </v-btn>
+                  <v-btn
+                    icon
+                    variant="text"
+                    size="small"
+                    color="warning"
+                    @click="restoreFromBackup(item)"
+                  >
+                    <v-icon>mdi-restore</v-icon>
+                    <v-tooltip activator="parent" location="top">Wiederherstellen</v-tooltip>
+                  </v-btn>
+                  <v-btn
+                    icon
+                    variant="text"
+                    size="small"
+                    color="error"
+                    @click="confirmDeleteBackup(item)"
+                  >
+                    <v-icon>mdi-delete</v-icon>
+                    <v-tooltip activator="parent" location="top">Loeschen</v-tooltip>
+                  </v-btn>
+                </div>
               </template>
             </v-data-table>
           </v-card-text>
