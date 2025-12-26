@@ -651,6 +651,8 @@ async function saveSchedule() {
     // Aktualisierte Daten (inkl. next_run) uebernehmen
     schedule.value = response.data
     showSnackbar('Zeitplan gespeichert')
+    // Backup-Liste aktualisieren (falls geplantes Backup ausgefuehrt wurde)
+    await loadBackups()
   } catch (e) {
     showSnackbar('Fehler beim Speichern des Zeitplans', 'error')
   } finally {
