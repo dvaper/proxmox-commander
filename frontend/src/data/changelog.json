@@ -1,5 +1,14 @@
 [
   {
+    "version": "v0.3.33",
+    "date": "2025-12-26",
+    "changes": {
+      "Features": [
+        "Backup & Restore Feature implementiert"
+      ]
+    }
+  },
+  {
     "version": "v0.3.32",
     "date": "2025-12-26",
     "changes": {
