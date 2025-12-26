@@ -77,7 +77,7 @@ class BackupScheduler:
                 trigger = self._create_trigger(schedule.frequency, schedule.time)
 
                 if trigger:
-                    self._add_or_update_job(trigger, schedule)
+                    await self._add_or_update_job(trigger, schedule)
                     logger.info(
                         f"Backup-Job konfiguriert: {schedule.frequency} um {schedule.time}"
                     )
@@ -105,7 +105,7 @@ class BackupScheduler:
             logger.error(f"Fehler beim Erstellen des Triggers: {e}")
             return None
 
-    def _add_or_update_job(self, trigger: CronTrigger, schedule: BackupSchedule):
+    async def _add_or_update_job(self, trigger: CronTrigger, schedule: BackupSchedule):
         """Fuegt einen Job hinzu oder aktualisiert ihn"""
         # Existierenden Job entfernen
         self._remove_job()
@@ -123,7 +123,7 @@ class BackupScheduler:
         job = self.scheduler.get_job(self._job_id)
         if job:
             next_run = job.next_run_time
-            asyncio.create_task(self._update_next_run(next_run))
+            await self._update_next_run(next_run)
 
     def _remove_job(self):
         """Entfernt den geplanten Job"""

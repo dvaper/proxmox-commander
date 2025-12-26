@@ -235,10 +235,11 @@ async def update_schedule(
             detail="Zeitplan konnte nicht aktualisiert werden"
         )
 
-    # Scheduler neu laden
+    # Scheduler neu laden (aktualisiert next_run in der DB)
     await backup_scheduler.reload_schedule()
 
-    return schedule
+    # Aktualisierten Zeitplan aus DB zurueckladen (mit next_run)
+    return await backup_service.get_schedule()
 
 
 # =============================================================================
