@@ -1,5 +1,14 @@
 [
   {
+    "version": "v0.3.27",
+    "date": "2025-12-26",
+    "changes": {
+      "Bugfixes": [
+        "Proxmox-Verbindungstest mit maskiertem Secret"
+      ]
+    }
+  },
+  {
     "version": "v0.3.26",
     "date": "2025-12-26",
     "changes": {
