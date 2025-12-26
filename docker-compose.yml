@@ -53,6 +53,7 @@ services:
       - ./data/terraform:/data/terraform
       - ./data/ssh:/data/ssh
       - ./data/config:/data/config
+      - /var/run/docker.sock:/var/run/docker.sock
       # Optional: Host SSH-Keys fuer Import im Setup-Wizard
       # Aktivieren um bestehende SSH-Keys zu importieren:
       # - ~/.ssh:/host-ssh:ro

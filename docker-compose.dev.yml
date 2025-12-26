@@ -55,6 +55,7 @@ services:
       - ./data/ssh:/data/ssh:ro
       - ./data/config:/data/config
       - ./.env:/app/.env:rw
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - proxmox-commander
 
