@@ -4,13 +4,13 @@
 # Config-Verzeichnis sicherstellen
 mkdir -p /data/config
 
-# Default-Playbooks kopieren falls Verzeichnis leer ist
+# Default-Playbooks synchronisieren (neue kopieren, existierende nicht ueberschreiben)
 if [ -d "/app/default-data/playbooks" ] && [ -d "/data/playbooks" ]; then
-    if [ -z "$(ls -A /data/playbooks 2>/dev/null)" ]; then
-        echo "Kopiere Default-Playbooks nach /data/playbooks..."
-        cp -r /app/default-data/playbooks/* /data/playbooks/
-        echo "Default-Playbooks installiert."
-    fi
+    echo "Synchronisiere Playbooks..."
+    # cp -n = no-clobber, ueberschreibt keine existierenden Dateien
+    cp -n /app/default-data/playbooks/*.yml /data/playbooks/ 2>/dev/null || true
+    cp -n /app/default-data/playbooks/*.yaml /data/playbooks/ 2>/dev/null || true
+    echo "Playbooks synchronisiert."
 fi
 
 # Terraform-Module kopieren falls nicht vorhanden
