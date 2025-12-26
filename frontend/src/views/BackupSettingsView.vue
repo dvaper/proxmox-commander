@@ -337,21 +337,21 @@
                 {{ formatSize(item.size_bytes) }}
               </template>
               <template v-slot:item.components="{ item }">
-                <v-chip
-                  v-for="comp in item.components.slice(0, 3)"
-                  :key="comp"
-                  size="x-small"
-                  class="mr-1"
-                >
-                  {{ getComponentLabel(comp) }}
-                </v-chip>
-                <v-chip
-                  v-if="item.components.length > 3"
-                  size="x-small"
-                  color="grey"
-                >
-                  +{{ item.components.length - 3 }}
-                </v-chip>
+                <div class="text-no-wrap">
+                  <v-chip size="x-small" class="mr-1">
+                    {{ getComponentLabel(item.components[0]) }}
+                  </v-chip>
+                  <v-chip
+                    v-if="item.components.length > 1"
+                    size="x-small"
+                    color="grey"
+                  >
+                    +{{ item.components.length - 1 }}
+                    <v-tooltip activator="parent" location="top">
+                      {{ item.components.map(c => getComponentLabel(c)).join(', ') }}
+                    </v-tooltip>
+                  </v-chip>
+                </div>
               </template>
               <template v-slot:item.is_scheduled="{ item }">
                 <v-icon
