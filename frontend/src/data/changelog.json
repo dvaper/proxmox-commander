@@ -1,5 +1,17 @@
 [
   {
+    "version": "v0.3.55-dev.1",
+    "date": "2025-12-27",
+    "changes": {
+      "Features": [
+        "Changelog bei stabilem Release automatisch bereinigen"
+      ],
+      "Dokumentation": [
+        "V0.3.54 Release zum Changelog hinzugefügt"
+      ]
+    }
+  },
+  {
     "version": "v0.3.54",
     "date": "2025-12-27",
     "title": "CI/CD & Changelog",
