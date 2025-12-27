@@ -23,25 +23,6 @@ class VMStatus(str, Enum):
     PAUSED = "paused"
 
 
-class AnsibleGroup(str, Enum):
-    """Verfügbare Ansible-Inventar-Gruppen für neue VMs"""
-    NONE = ""  # Nicht ins Inventory aufnehmen
-    GITLAB_SERVERS = "gitlab_servers"
-    DNS = "dns"
-    PROXY = "proxy"
-    DOCKER_HOSTS = "docker_hosts"
-    DOCUMENTATION = "documentation"
-    MEDIA = "media"
-    DEVELOPMENT = "development"
-    MONITORING = "monitoring"
-    SECURITY = "security"
-    APPS = "apps"
-    LMS = "lms"
-    WEBAPPS = "webapps"
-    TERRAFORM = "terraform"
-    MISC = "misc"
-
-
 class ProxmoxNode(str, Enum):
     """Verfügbare Proxmox-Nodes"""
     GANDALF = "gandalf"
@@ -86,8 +67,8 @@ class VMConfigCreate(BaseModel):
     auto_reserve_ip: bool = Field(default=True, description="IP in NetBox reservieren")
 
     # Ansible Integration
-    ansible_group: AnsibleGroup = Field(
-        default=AnsibleGroup.NONE,
+    ansible_group: str = Field(
+        default="",
         description="Ansible-Inventar-Gruppe (leer = nicht ins Inventory aufnehmen)"
     )
 
