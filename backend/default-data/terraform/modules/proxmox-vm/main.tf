@@ -82,6 +82,9 @@ resource "proxmox_virtual_environment_vm" "vm" {
   on_boot = true
   started = true
 
+  # Timeouts fuer langsame Storage-Operationen
+  timeout_clone = 600
+
   lifecycle {
     ignore_changes = [
       initialization,
