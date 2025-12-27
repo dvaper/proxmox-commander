@@ -1,5 +1,14 @@
 [
   {
+    "version": "v0.3.50",
+    "date": "2025-12-27",
+    "changes": {
+      "Bugfixes": [
+        "Ansible-Gruppe 'terraform' zum Enum hinzugefuegt"
+      ]
+    }
+  },
+  {
     "version": "v0.3.49",
     "date": "2025-12-27",
     "changes": {
