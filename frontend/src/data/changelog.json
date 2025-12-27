@@ -1,5 +1,14 @@
 [
   {
+    "version": "v0.3.46",
+    "date": "2025-12-27",
+    "changes": {
+      "Bugfixes": [
+        "Hostname in Cloud-Init initialization Block setzen"
+      ]
+    }
+  },
+  {
     "version": "v0.3.45",
     "date": "2025-12-26",
     "changes": {
