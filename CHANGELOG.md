@@ -6,6 +6,10 @@ Alle wichtigen Änderungen an diesem Projekt werden hier dokumentiert.
 
 ## [0.3.x] VM-Management & Automation
 
+### 0.3.55 (2025-12-27)
+- Automatische Changelog-Bereinigung bei stabilen Releases
+- Dev-Versionen und Zwischen-Patches werden konsolidiert
+
 ### 0.3.54 (2025-12-27)
 - Changelog mit Major-Versionen und konkreten Releases strukturiert
 - Dev-Tags (z.B. v0.3.54-dev.1) für iterative Entwicklung ohne Release
