@@ -6,6 +6,10 @@ Alle wichtigen Änderungen an diesem Projekt werden hier dokumentiert.
 
 ## [0.3.x] VM-Management & Automation
 
+### 0.3.54 (2025-12-27)
+- Changelog mit Major-Versionen und konkreten Releases strukturiert
+- Dev-Tags (z.B. v0.3.54-dev.1) für iterative Entwicklung ohne Release
+
 ### 0.3.53 (2025-12-27)
 - Ansible-Gruppe direkt im VM-Dialog erstellen (+ Button)
 - Dynamische Ansible-Gruppen aus Inventory statt hardcoded Enum
