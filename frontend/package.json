@@ -1,6 +1,6 @@
 {
   "name": "proxmox-commander",
-  "version": "0.3.55-dev.1",
+  "version": "0.3.55",
   "private": true,
   "type": "module",
   "scripts": {
