@@ -2,127 +2,43 @@
   {
     "version": "v0.3.54",
     "date": "2025-12-27",
+    "title": "CI/CD & Changelog",
     "changes": {
-      "Dokumentation": [
-        "Changelog mit Major-Versionen und konkreten Releases strukturiert",
-        "Changelog konsolidiert und strukturiert"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.54-dev.2",
-    "date": "2025-12-27",
-    "changes": {
+      "Features": [
+        "Dev-Tags (z.B. v0.3.54-dev.1) fuer iterative Entwicklung ohne Release",
+        "Changelog wird bei stabilem Release automatisch bereinigt"
+      ],
       "Dokumentation": [
         "Changelog mit Major-Versionen und konkreten Releases strukturiert"
       ]
     }
   },
   {
-    "version": "v0.3.54-dev.1",
-    "date": "2025-12-27",
-    "changes": {
-      "Dokumentation": [
-        "Changelog konsolidiert und strukturiert"
-      ]
-    }
-  },
-  {
     "version": "v0.3.53",
     "date": "2025-12-27",
+    "title": "Ansible-Gruppen",
     "changes": {
       "Features": [
-        "Ansible-Gruppe Dropdown mit Neu-Erstellen-Button"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.52",
-    "date": "2025-12-27",
-    "changes": {
-      "Bugfixes": [
-        "Ansible_group.value Zugriff entfernt (ist jetzt String)"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.51",
-    "date": "2025-12-27",
-    "changes": {
-      "Bugfixes": [
-        "Ansible-Gruppen dynamisch aus Inventory laden statt hardcoded Enum"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.50",
-    "date": "2025-12-27",
-    "changes": {
-      "Bugfixes": [
-        "Ansible-Gruppe 'terraform' zum Enum hinzugefuegt"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.49",
-    "date": "2025-12-27",
-    "changes": {
-      "Features": [
-        "Automatische Entfernung verwaister Hosts beim Inventory-Sync"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.48",
-    "date": "2025-12-27",
-    "changes": {
-      "Features": [
-        "Automatische Freigabe verwaister IPs beim NetBox-Sync"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.47",
-    "date": "2025-12-27",
-    "changes": {
-      "Bugfixes": [
-        "Timeout fuer Clone-Operationen auf 600s erhoehen"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.46",
-    "date": "2025-12-27",
-    "changes": {
-      "Bugfixes": [
-        "Hostname in Cloud-Init initialization Block setzen"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.45",
-    "date": "2025-12-26",
-    "changes": {
-      "Wartung": [
-        "Version aktualisiert"
+        "Ansible-Gruppe direkt im VM-Dialog erstellen (+ Button)",
+        "Dynamische Ansible-Gruppen aus Inventory statt hardcoded Enum"
       ]
     }
   },
   {
     "version": "v0.3.44",
     "date": "2025-12-26",
+    "title": "Backup & Restore",
     "changes": {
-      "Dokumentation": [
-        "Changelog konsolidiert und nach Feature-Bereichen strukturiert"
-      ]
-    }
-  },
-  {
-    "version": "v0.3.43",
-    "date": "2025-12-26",
-    "changes": {
-      "Dokumentation": [
-        "Hinweis fuer externe NetBox-Konfiguration in UI"
+      "Features": [
+        "Backup & Restore Feature fuer VMs und Container",
+        "Zeitplan-basierte automatische Backups",
+        "Restore-Funktionalitaet mit Fortschrittsanzeige",
+        "Automatische Entfernung verwaister Hosts beim Inventory-Sync",
+        "Automatische Freigabe verwaister IPs beim NetBox-Sync"
+      ],
+      "Bugfixes": [
+        "Timeout fuer Clone-Operationen auf 600s erhoehen",
+        "Hostname in Cloud-Init initialization Block setzen"
       ]
     }
   },
