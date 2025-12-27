@@ -46,6 +46,7 @@ class InventorySyncService:
             "inventory_hosts": 0,
             "added": [],
             "updated": [],
+            "removed": [],
             "skipped": [],
             "errors": []
         }
@@ -188,8 +189,26 @@ class InventorySyncService:
                 except Exception as e:
                     details["errors"].append(f"{vm_name}: {str(e)}")
 
+            # Verwaiste Hosts entfernen (in proxmox_discovered aber keine VM mehr)
+            proxmox_vm_names = {vm.get("name") for vm in proxmox_vms if vm.get("name")}
+            discovered_group = editor._find_group("proxmox_discovered")
+            if discovered_group and discovered_group.get("hosts"):
+                discovered_hosts = list(discovered_group["hosts"].keys())
+                for host_name in discovered_hosts:
+                    if host_name not in proxmox_vm_names:
+                        # Host ist in Inventory aber VM existiert nicht mehr
+                        success, msg = editor.remove_host_from_group(host_name, "proxmox_discovered")
+                        if success:
+                            details["removed"].append({
+                                "name": host_name,
+                                "reason": "VM nicht mehr in Proxmox vorhanden"
+                            })
+                            logger.info(f"Verwaister Host '{host_name}' aus Inventory entfernt")
+                        else:
+                            details["errors"].append(f"{host_name}: Entfernen fehlgeschlagen: {msg}")
+
             # Speichern wenn Änderungen vorhanden
-            has_changes = details["added"] or details["updated"]
+            has_changes = details["added"] or details["updated"] or details["removed"]
             if has_changes:
                 # Gruppe "proxmox_discovered" erstellen falls nicht vorhanden (nur bei neuen Hosts)
                 if details["added"] and not editor._find_group("proxmox_discovered"):
@@ -201,6 +220,8 @@ class InventorySyncService:
                     commit_parts.append(f"{len(details['added'])} VM(s) hinzugefuegt")
                 if details["updated"]:
                     commit_parts.append(f"{len(details['updated'])} VM(s) migriert")
+                if details["removed"]:
+                    commit_parts.append(f"{len(details['removed'])} Host(s) entfernt")
 
                 success, msg = editor.save(
                     commit_message=f"Auto-Sync: {', '.join(commit_parts)}",
@@ -228,6 +249,8 @@ class InventorySyncService:
                 msg_parts.append(f"{len(details['added'])} hinzugefuegt")
             if details["updated"]:
                 msg_parts.append(f"{len(details['updated'])} migriert")
+            if details["removed"]:
+                msg_parts.append(f"{len(details['removed'])} entfernt")
             if details["skipped"]:
                 msg_parts.append(f"{len(details['skipped'])} uebersprungen")
             if details["errors"]:
