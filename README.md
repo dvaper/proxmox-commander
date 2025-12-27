@@ -1,3 +1,15 @@
+> [!IMPORTANT]
+> **Dieses Repository wurde archiviert.**
+>
+> Die Entwicklung wird fortgesetzt unter: **[dvaper/pve-commander](https://github.com/dvaper/pve-commander)**
+>
+> ---
+> **This repository has been archived.**
+>
+> Development continues at: **[dvaper/pve-commander](https://github.com/dvaper/pve-commander)**
+
+---
+
 <p align="center">
   <img src="docs/logo.svg" alt="Proxmox Commander" width="480">
 </p>
