@@ -1,5 +1,15 @@
 [
   {
+    "version": "v0.3.54",
+    "date": "2025-12-27",
+    "changes": {
+      "Dokumentation": [
+        "Changelog mit Major-Versionen und konkreten Releases strukturiert",
+        "Changelog konsolidiert und strukturiert"
+      ]
+    }
+  },
+  {
     "version": "v0.3.54-dev.2",
     "date": "2025-12-27",
     "changes": {
