@@ -1,5 +1,14 @@
 [
   {
+    "version": "v0.3.53",
+    "date": "2025-12-27",
+    "changes": {
+      "Features": [
+        "Ansible-Gruppe Dropdown mit Neu-Erstellen-Button"
+      ]
+    }
+  },
+  {
     "version": "v0.3.52",
     "date": "2025-12-27",
     "changes": {
