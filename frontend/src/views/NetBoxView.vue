@@ -391,7 +391,8 @@
                 <div>
                   <strong>{{ syncResult.scanned }}</strong> VMs gescannt |
                   <strong>{{ syncResult.created }}</strong> IPs angelegt |
-                  <strong>{{ syncResult.skipped }}</strong> bereits vorhanden
+                  <strong>{{ syncResult.skipped }}</strong> bereits vorhanden |
+                  <strong>{{ syncResult.released || 0 }}</strong> freigegeben
                 </div>
               </div>
               <div v-if="syncResult.errors?.length > 0" class="mt-2">
@@ -432,6 +433,28 @@
                       <v-chip size="x-small" :color="item.status === 'running' ? 'success' : 'grey'" variant="outlined">
                         {{ item.status }}
                       </v-chip>
+                    </template>
+                  </v-data-table>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+
+            <!-- Freigegebene IPs -->
+            <v-expansion-panels v-if="syncResult?.released_ips?.length > 0" class="mb-4">
+              <v-expansion-panel>
+                <v-expansion-panel-title>
+                  <v-icon start color="warning">mdi-delete-circle</v-icon>
+                  {{ syncResult.released_ips.length }} verwaiste IPs freigegeben
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <v-data-table
+                    :headers="releasedIpHeaders"
+                    :items="syncResult.released_ips"
+                    density="compact"
+                    :items-per-page="10"
+                  >
+                    <template v-slot:item.ip="{ item }">
+                      <code>{{ item.ip }}</code>
                     </template>
                   </v-data-table>
                 </v-expansion-panel-text>
@@ -552,6 +575,12 @@ const syncIpHeaders = [
   { title: 'Quelle', key: 'source', width: '100px' },
   { title: 'Status', key: 'status', width: '100px' },
   { title: 'In NetBox', key: 'exists_in_netbox', width: '100px' },
+]
+
+const releasedIpHeaders = [
+  { title: 'IP', key: 'ip', width: '140px' },
+  { title: 'Beschreibung', key: 'description' },
+  { title: 'Grund', key: 'reason' },
 ]
 
 // Import

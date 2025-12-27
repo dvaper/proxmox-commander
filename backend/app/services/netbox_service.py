@@ -296,6 +296,43 @@ class NetBoxService:
 
             return data["count"] == 0
 
+    async def get_active_ips(self, prefix: str = None) -> list[dict]:
+        """
+        Holt alle aktiven IP-Adressen aus NetBox.
+
+        Args:
+            prefix: Optional - nur IPs aus diesem Prefix
+
+        Returns:
+            Liste von IP-Adressen mit Metadaten
+        """
+        self._check_token()
+
+        async with httpx.AsyncClient() as client:
+            params = {"status": "active", "limit": 1000}
+            if prefix:
+                params["parent"] = prefix
+
+            response = await client.get(
+                f"{self.base_url}/api/ipam/ip-addresses/",
+                params=params,
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            return [
+                {
+                    "id": ip["id"],
+                    "address": ip["address"].split("/")[0],  # Ohne CIDR
+                    "description": ip.get("description", ""),
+                    "dns_name": ip.get("dns_name", ""),
+                    "status": ip["status"]["value"],
+                }
+                for ip in data.get("results", [])
+            ]
+
     # =========================================================================
     # Virtualization - VM Management
     # =========================================================================

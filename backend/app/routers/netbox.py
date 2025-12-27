@@ -75,13 +75,22 @@ class ProxmoxIP(BaseModel):
     prefix: Optional[str] = None
 
 
+class ReleasedIP(BaseModel):
+    """Freigegebene IP"""
+    ip: str
+    description: str
+    reason: str
+
+
 class IPSyncResult(BaseModel):
     """IP-Sync Ergebnis"""
     scanned: int
     created: int
     skipped: int
+    released: int = 0
     errors: list[str]
     ips: list[ProxmoxIP]
+    released_ips: list[ReleasedIP] = []
 
 
 # =============================================================================
@@ -221,20 +230,46 @@ async def sync_ips_from_proxmox(
 
     - Neue IPs werden in NetBox angelegt
     - Existierende IPs werden uebersprungen
+    - Verwaiste IPs (in NetBox aktiv, aber keine VM) werden freigegeben
     - Erfordert Admin-Rechte
     """
     created = 0
     skipped = 0
+    released = 0
     errors = []
     result_ips = []
+    released_ips = []
 
     try:
         # 1. Proxmox VMs scannen
         proxmox_ips = await proxmox_service.scan_vm_ips()
+        proxmox_ip_set = {vm_ip.get("ip") for vm_ip in proxmox_ips if vm_ip.get("ip")}
 
         # 2. Prefixes aus NetBox holen fuer Zuordnung
         prefixes = await netbox_service.get_prefixes_with_utilization()
 
+        # 3. Alle aktiven IPs aus NetBox holen
+        netbox_active_ips = await netbox_service.get_active_ips()
+
+        # 4. Verwaiste IPs finden und freigeben
+        for netbox_ip in netbox_active_ips:
+            ip_addr = netbox_ip.get("address")
+            if ip_addr and ip_addr not in proxmox_ip_set:
+                # IP ist in NetBox aktiv, aber keine VM hat diese IP
+                try:
+                    await netbox_service.release_ip(ip_addr)
+                    released += 1
+                    released_ips.append(ReleasedIP(
+                        ip=ip_addr,
+                        description=netbox_ip.get("description", ""),
+                        reason="Keine VM mit dieser IP in Proxmox gefunden",
+                    ))
+                    logger.info(f"Verwaiste IP {ip_addr} freigegeben")
+                except Exception as e:
+                    errors.append(f"Release {ip_addr}: {str(e)}")
+                    logger.error(f"Fehler beim Freigeben von IP {ip_addr}: {e}")
+
+        # 5. Proxmox IPs verarbeiten (neue anlegen)
         for vm_ip in proxmox_ips:
             ip = vm_ip.get("ip")
             if not ip:
@@ -288,8 +323,10 @@ async def sync_ips_from_proxmox(
             scanned=len(proxmox_ips),
             created=created,
             skipped=skipped,
+            released=released,
             errors=errors,
             ips=result_ips,
+            released_ips=released_ips,
         )
 
     except Exception as e:
