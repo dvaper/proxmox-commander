@@ -52,6 +52,9 @@ resource "proxmox_virtual_environment_vm" "vm" {
   initialization {
     datastore_id = var.disk_storage
 
+    # Hostname aus VM-Name setzen
+    hostname = var.name
+
     ip_config {
       ipv4 {
         address = "${var.ip_address}/${var.netmask}"
