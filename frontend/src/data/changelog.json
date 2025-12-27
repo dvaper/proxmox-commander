@@ -1,5 +1,14 @@
 [
   {
+    "version": "v0.3.49",
+    "date": "2025-12-27",
+    "changes": {
+      "Features": [
+        "Automatische Entfernung verwaister Hosts beim Inventory-Sync"
+      ]
+    }
+  },
+  {
     "version": "v0.3.48",
     "date": "2025-12-27",
     "changes": {
