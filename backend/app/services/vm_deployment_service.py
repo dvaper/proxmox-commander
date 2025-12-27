@@ -214,7 +214,7 @@ module "{module_name}" {{
             memory_gb=config.memory_gb,
             disk_size_gb=config.disk_size_gb,
             vlan=config.vlan,
-            ansible_group=config.ansible_group.value if config.ansible_group else "",
+            ansible_group=config.ansible_group or "",
             template_id=config.template_id,
             storage=config.storage,
         )
@@ -283,7 +283,7 @@ module "{module_name}" {{
                 print(f"Fehler bei Cloud-Init Generierung: {e}")
 
         # Terraform-Datei generieren
-        ansible_group = config.ansible_group.value if config.ansible_group else ""
+        ansible_group = config.ansible_group or ""
         content = self.generate_tf_content(
             name=config.name,
             vmid=vmid,
