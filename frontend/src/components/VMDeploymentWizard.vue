@@ -110,19 +110,39 @@
                 </template>
               </v-select>
 
-              <v-select
-                v-model="config.ansible_group"
-                :items="ansibleGroups"
-                item-title="label"
-                item-value="value"
-                label="Ansible-Inventar-Gruppe"
-                prepend-inner-icon="mdi-ansible"
-                variant="outlined"
-                density="compact"
-                class="mt-4"
-                hint="Nach erfolgreichem Deploy wird die VM automatisch ins Ansible-Inventar eingetragen"
-                persistent-hint
-              ></v-select>
+              <div class="d-flex align-center mt-4">
+                <v-select
+                  v-model="config.ansible_group"
+                  :items="ansibleGroups"
+                  item-title="label"
+                  item-value="value"
+                  label="Ansible-Inventar-Gruppe"
+                  prepend-inner-icon="mdi-ansible"
+                  variant="outlined"
+                  density="compact"
+                  hint="Nach erfolgreichem Deploy wird die VM automatisch ins Ansible-Inventar eingetragen"
+                  persistent-hint
+                  class="flex-grow-1"
+                ></v-select>
+                <v-btn
+                  icon
+                  variant="text"
+                  color="primary"
+                  size="small"
+                  class="ml-2"
+                  @click="showGroupCreateDialog = true"
+                  title="Neue Gruppe erstellen"
+                >
+                  <v-icon>mdi-plus</v-icon>
+                </v-btn>
+              </div>
+
+              <!-- Dialog für neue Ansible-Gruppe -->
+              <GroupCreateDialog
+                v-model="showGroupCreateDialog"
+                :groups="inventoryGroups"
+                @created="onGroupCreated"
+              />
 
               <v-select
                 v-model="config.cloud_init_profile"
@@ -446,6 +466,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import api from '@/api/client'
+import GroupCreateDialog from './GroupCreateDialog.vue'
 
 const emit = defineEmits(['created', 'close'])
 
@@ -501,6 +522,10 @@ const loadingCloudInit = ref(false)
 const presets = ref([])
 const selectedPreset = ref(null)
 const loadingPresets = ref(false)
+
+// Gruppen-Dialog
+const showGroupCreateDialog = ref(false)
+const inventoryGroups = ref([])
 
 // Validierungsregeln
 const rules = {
@@ -635,13 +660,24 @@ async function loadAnsibleGroups() {
   try {
     const response = await api.get('/api/terraform/ansible-groups')
     ansibleGroups.value = response.data
+    // Für GroupCreateDialog: Alle Gruppen ohne "Keine"-Option
+    inventoryGroups.value = response.data
+      .filter(g => g.value !== '')
+      .map(g => ({ name: g.value }))
   } catch (e) {
     console.error('Ansible-Gruppen laden fehlgeschlagen:', e)
     // Fallback mit Standard-Gruppen
     ansibleGroups.value = [
       { value: '', label: 'Nicht ins Inventory aufnehmen' },
     ]
+    inventoryGroups.value = []
   }
+}
+
+async function onGroupCreated(groupName) {
+  // Gruppen neu laden und die neue Gruppe auswählen
+  await loadAnsibleGroups()
+  config.value.ansible_group = groupName
 }
 
 async function loadCloudInitProfiles() {
