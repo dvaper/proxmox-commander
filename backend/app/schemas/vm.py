@@ -38,6 +38,7 @@ class AnsibleGroup(str, Enum):
     APPS = "apps"
     LMS = "lms"
     WEBAPPS = "webapps"
+    TERRAFORM = "terraform"
     MISC = "misc"
 
 
